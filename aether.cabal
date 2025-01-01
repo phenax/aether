@@ -69,8 +69,9 @@ test-suite specs
   hs-source-dirs: specs
   main-is: Main.hs
   ghc-options: -Wno-name-shadowing
-  -- other-modules:
-  --   Specs.AppEventSpec
+  other-modules:
+    TestUtils
+    Specs.ParserSpec
   build-depends:
     lib-aether,
     hspec
