@@ -1,0 +1,10 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:lib-aether"
+
+    - path: "./bin/Main.hs"
+      component: "exe:aether"
+
+    - path: "./specs"
+      component: "test:specs"

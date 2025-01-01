@@ -1,0 +1,76 @@
+cabal-version:   3.0
+
+name:            aether
+version:         0.1.0.0
+license:         MIT
+author:          Akshay Nair <phenax5@gmail.com>
+maintainer:      Akshay Nair <phenax5@gmail.com>
+build-type:      Simple
+synopsis:        Aether
+description:     Aether
+
+source-repository head
+  type:     git
+  location: https://github.com/phenax/aether-lang.git
+
+common common-config
+  default-extensions:
+    ExplicitForAll
+    FlexibleContexts
+    FlexibleInstances
+    ForeignFunctionInterface
+    GADTs
+    GeneralizedNewtypeDeriving
+    LambdaCase
+    NamedFieldPuns
+    NumericUnderscores
+    OverloadedStrings
+    QuasiQuotes
+    RankNTypes
+    StandaloneDeriving
+    TemplateHaskell
+    TupleSections
+    UndecidableInstances
+  default-language: Haskell2010
+  build-depends:
+    base,
+    -- bytestring,
+    containers <= 0.7,
+    data-default <= 0.8.0.0,
+    file-embed == 0.0.16.0,
+    megaparsec <= 9.7.0,
+    mtl == 2.3.1,
+    template-haskell,
+    text
+
+common warnings
+  ghc-options:
+    -Wall -Wincomplete-record-updates -Wincomplete-uni-patterns
+    -Wunused-foralls -Wextra -Wno-unused-do-bind -Wname-shadowing
+    -fwarn-tabs -fprint-explicit-foralls -fprint-explicit-kinds
+
+executable aether
+  import: common-config, warnings
+  hs-source-dirs: bin
+  main-is: Main.hs
+  build-depends: lib-aether
+
+library lib-aether
+  import: common-config, warnings
+  hs-source-dirs: src
+  exposed-modules:
+    Aether
+    Aether.Syntax.Parser
+    Aether.Types
+
+test-suite specs
+  import: common-config, warnings
+  type: exitcode-stdio-1.0
+  hs-source-dirs: specs
+  main-is: Main.hs
+  ghc-options: -Wno-name-shadowing
+  -- other-modules:
+  --   Specs.AppEventSpec
+  build-depends:
+    lib-aether,
+    hspec

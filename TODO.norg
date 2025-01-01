@@ -1,0 +1,15 @@
+* Current
+  - (-) Optimize speed of ocr
+  - ( ) Ctrl+Click
+
+* Later
+  - ( ) Middle click
+  - ( ) Look into making mouse controls (click/mouse down/mouse up) cross-platform
+  - ( ) Look into making screenshot cross-platform
+  - ( ) Support 4k screen resolution?
+
+* Maybe
+  - ( ) Rethink keybindings
+  - ( ) Custom configuration?
+  - ( ) Scroll
+  - ( ) Process mode? Run in bg with root key binding to toggle
