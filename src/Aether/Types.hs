@@ -2,14 +2,14 @@ module Aether.Types where
 
 data Literal
   = LitString String
-  | LitInt Int
+  | LitNumber Double
   | LitBool Bool
   | LitNil
-  | LitSymbol Expr
   deriving (Show, Eq)
 
 data Expr
   = ExprSymList [Expr]
-  | ExprIdentifier String
+  | ExprSymbol String
+  | ExprQuoted Expr
   | ExprLiteral Literal
   deriving (Show, Eq)

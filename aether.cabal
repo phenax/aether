@@ -38,6 +38,7 @@ common common-config
     containers <= 0.7,
     data-default <= 0.8.0.0,
     file-embed == 0.0.16.0,
+    interpolate == 0.2.1,
     megaparsec <= 9.7.0,
     mtl == 2.3.1,
     template-haskell,

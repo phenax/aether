@@ -1,15 +1,24 @@
 * Current
-  - (-) Optimize speed of ocr
-  - ( ) Ctrl+Click
+  - (x) Simple parser
+  - ( ) Simple interpreter
 
 * Later
-  - ( ) Middle click
-  - ( ) Look into making mouse controls (click/mouse down/mouse up) cross-platform
-  - ( ) Look into making screenshot cross-platform
-  - ( ) Support 4k screen resolution?
+  - ( ) Repl
+  - ( ) Server mode + socket for commands
+  - ( ) UI for sending commands (dmenu-like)
+  - ( ) UI repl completion
+  - ( ) UI repl highlighting
+  - ( ) Parser: Allow string escaping \"
+
+* Integration ideas
+  - ( ) UI elements with gtk, qt or sdl
+  - ( ) Thunderbird integration
+  - ( ) Timer/reminder
+  - ( ) Quick notes
+  - ( ) Quick bookmarking
 
 * Maybe
-  - ( ) Rethink keybindings
-  - ( ) Custom configuration?
-  - ( ) Scroll
-  - ( ) Process mode? Run in bg with root key binding to toggle
+  - ( ) JIT
+  - ( ) Treesitter to update files
+  - ( ) Notifications integration
+  - ( ) Record and replay keystrokes/mouse events?
