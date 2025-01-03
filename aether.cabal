@@ -48,6 +48,7 @@ common warnings
   ghc-options:
     -Wall -Wincomplete-record-updates -Wincomplete-uni-patterns
     -Wunused-foralls -Wextra -Wno-unused-do-bind -Wname-shadowing
+    -Wno-unrecognised-pragmas
     -fwarn-tabs -fprint-explicit-foralls -fprint-explicit-kinds
 
 executable aether
@@ -61,6 +62,7 @@ library lib-aether
   hs-source-dirs: src
   exposed-modules:
     Aether
+    Aether.Runtime.Interpreter
     Aether.Syntax.Parser
     Aether.Types
 
