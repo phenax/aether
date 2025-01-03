@@ -13,3 +13,7 @@
 (set not (-> [a] (not a)))
 (set && (-> [a b] (&& a b)))
 (set || (-> [a b] (&& a b)))
+
+; Conditionals. (booleans are directly callable for use as conditionals)
+(defmacro (if cond then else)
+  (eval '(,(eval cond) ,then ,else)))

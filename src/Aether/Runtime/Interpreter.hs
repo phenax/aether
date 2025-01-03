@@ -163,6 +163,11 @@ evaluateCall (ValMacro labels body) argsE = do
   case result of
     ValQuoted expr -> interpretExpression expr
     _ -> pure result
+evaluateCall (ValBool bool) argsE = do
+  case argsE of
+    (then_ : _) | bool -> interpretExpression then_
+    (_ : else_ : _) | not bool -> interpretExpression else_
+    _ -> pure ValNil
 evaluateCall value _args = pure value
 
 interpretAll :: [Expr] -> Evaluator m [EvalValue]

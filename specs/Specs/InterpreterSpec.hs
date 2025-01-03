@@ -76,6 +76,17 @@ test = do
           evalExprs exprs
             `shouldReturn` Right [ValNil, ValLambda ["a"] $ ExprSymList [ExprSymbol "do", ExprSymbol "a"]]
 
+    context "when calling a boolean" $ do
+      context "when value is true (#T)" $ do
+        it "evaluates and returns first argument" $ do
+          let exprs = ExprSymList [ExprLiteral $ LitBool True, ExprLiteral $ LitNumber 42, ExprLiteral $ LitNumber 99]
+          evalExpr exprs `shouldReturn` Right (ValNumber 42)
+
+      context "when value is true (#F)" $ do
+        it "evaluates and returns first argument" $ do
+          let exprs = ExprSymList [ExprLiteral $ LitBool False, ExprLiteral $ LitNumber 42, ExprLiteral $ LitNumber 99]
+          evalExpr exprs `shouldReturn` Right (ValNumber 99)
+
       context "when there are no expressions in body" $ do
         it "returns nil" $ do
           let exprs =

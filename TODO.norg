@@ -5,6 +5,7 @@
   - (x) Simple stdlib
   - (x) Quasiquotes
   - ( ) List operations
+  - ( ) Fix lambda scope to be scope of definition and not call site
   - ( ) Tests for defmacro
   - ( ) Var args
   - ( ) Stack trace

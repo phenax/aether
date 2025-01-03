@@ -1,13 +1,10 @@
 module Specs.Integration.StdlibSpec where
 
-import Aether.Runtime (runExprInterpreter, runInterpreter)
-import Aether.Runtime.Interpreter (interpretExpression, runExprEvaluatorWithCallStack)
+import Aether.Runtime (runInterpreter)
 import Aether.Syntax.Parser
 import Aether.Types
-import Data.Either (isLeft)
 import Data.String.Interpolate.IsString
 import Test.Hspec
-import TestUtils
 import Text.Megaparsec (errorBundlePretty)
 
 test :: SpecWith ()
@@ -37,3 +34,12 @@ test = do
             (- 8 34 (- 3) 2)
           |]
           `shouldReturn` Right [ValNil, ValNumber (-26.0), ValNumber (-25.0)]
+
+  describe "core > if" $ do
+    it "evaluates conditionals" $ do
+      evalExpr
+        [i|
+          (if (gt? 99 0) (+ 8 1) (+ 2 2))
+          (if (lt? 99 0) (+ 8 1) (+ 2 2))
+        |]
+        `shouldReturn` Right [ValNumber 9, ValNumber 4]
