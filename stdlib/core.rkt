@@ -14,6 +14,29 @@
 (set && (-> [a b] (&& a b)))
 (set || (-> [a b] (&& a b)))
 
-; Conditionals. (booleans are directly callable for use as conditionals)
+; Primitives
+(define (id x) x)
+
 (defmacro (if cond then else)
   (eval '(,(eval cond) ,then ,else)))
+
+; List operations
+(define (null? x) (eq? x #nil))
+(set empty? null?)
+
+(define (fold fn init list)
+  (if (empty? list)
+    init
+    (fold fn
+      (fn init (car list))
+      (cdr list))))
+
+(define (reverse list)
+  (fold (-> [result val] (cons val result)) '[] list))
+
+(define (map mapfn list)
+  (reverse
+    (fold
+      (-> [result val] (cons (mapfn val) result))
+      '[]
+      list)))
