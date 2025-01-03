@@ -79,6 +79,36 @@ evaluateBuiltins "eval" [expr] = do
     _ -> pure . Just $ res
 evaluateBuiltins "eval" _ = do throwError $ TypeError "Invalid number of arguments sent to eval"
 
+-- Get first element from quoted symlist
+evaluateBuiltins "car" [expr] = do
+  res <- interpretExpression expr
+  case res of
+    ValQuoted (ExprSymList (first : _)) -> Just <$> interpretExpression first
+    ValQuoted quote -> Just <$> interpretExpression quote
+    _ -> pure . Just $ res
+evaluateBuiltins "car" _ = do throwError $ TypeError "Invalid number of arguments sent to car"
+
+-- Get tail elements from quoted symlist
+evaluateBuiltins "cdr" [expr] = do
+  res <- interpretExpression expr
+  case res of
+    ValQuoted (ExprSymList [_]) -> pure $ Just ValNil
+    ValQuoted (ExprSymList (_ : rest)) ->
+      Just . ValQuoted . ExprSymList . fmap ExprValue <$> mapM interpretExpression rest
+    _ -> pure $ Just ValNil
+evaluateBuiltins "cdr" _ = do throwError $ TypeError "Invalid number of arguments sent to cdr"
+
+-- Construct pair
+evaluateBuiltins "cons" [itemE, restE] = do
+  item <- interpretExpression itemE
+  rest <- interpretExpression restE
+  case rest of
+    ValQuoted (ExprSymList values) -> pure . Just $ ValQuoted (ExprSymList (ExprValue item : values))
+    ValNil -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
+    ValQuoted (ExprLiteral LitNil) -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
+    _ -> pure . Just $ ValQuoted (ExprSymList [ExprValue item, ExprValue rest])
+evaluateBuiltins "cons" _ = do throwError $ TypeError "Invalid number of arguments sent to const"
+
 -- Math operations
 evaluateBuiltins "+" exprs = Just <$> operateOnExprs (ValNumber . sum . fmap valToNumber) exprs
 evaluateBuiltins "*" exprs = Just <$> operateOnExprs (ValNumber . product . fmap valToNumber) exprs

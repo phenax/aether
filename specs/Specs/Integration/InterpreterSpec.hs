@@ -121,3 +121,49 @@ test = do
                     ]
                 )
             ]
+
+    context "list operations" $ do
+      context "with car" $ do
+        it "evaluates" $ do
+          evalExpr
+            [i|
+              (car '(42 24 899))
+              (car '(,(+ 20 5)))
+              (car '())
+            |]
+            `shouldReturn` Right
+              [ ValNumber 42,
+                ValNumber 25,
+                ValNil
+              ]
+      context "with cdr" $ do
+        it "evaluates" $ do
+          evalExpr
+            [i|
+              (cdr '(42 24 899))
+              (cdr '(,(+ 20 5)))
+              (cdr '())
+            |]
+            `shouldReturn` Right
+              [ ValQuoted (ExprSymList [ExprValue (ValNumber 24), ExprValue (ValNumber 899)]),
+                ValNil,
+                ValNil
+              ]
+      context "with cons" $ do
+        it "evaluates" $ do
+          evalExpr
+            [i|
+              (cons 5 (cons 2 #nil))
+              (cons 2 #nil)
+              (cons (cons 5 #nil) (cons 2 #nil))
+            |]
+            `shouldReturn` Right
+              [ ValQuoted (ExprSymList [ExprValue $ ValNumber 5.0, ExprValue (ValNumber 2.0)]),
+                ValQuoted (ExprSymList [ExprValue (ValNumber 2.0)]),
+                ValQuoted
+                  ( ExprSymList
+                      [ ExprValue $ ValQuoted (ExprSymList [ExprValue $ ValNumber 5.0]),
+                        ExprValue (ValNumber 2.0)
+                      ]
+                  )
+              ]
