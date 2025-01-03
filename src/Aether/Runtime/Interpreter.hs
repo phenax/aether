@@ -5,7 +5,9 @@ import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
 import Control.Monad.State (MonadIO, MonadState (get, put), StateT (runStateT), gets, modify')
 import qualified Data.Map as Map
 
-newtype EvalEnvironment = EvalEnvironment {envCallStack :: [Map.Map String EvalValue]}
+type Scope = Map.Map String EvalValue
+
+newtype EvalEnvironment = EvalEnvironment {envCallStack :: [Scope]}
   deriving (Show, Eq)
 
 instance Semigroup EvalEnvironment where
@@ -19,7 +21,7 @@ defineInCurrentScope name value env@(EvalEnvironment {envCallStack = (headStack 
   env {envCallStack = Map.insert name value headStack : rest}
 defineInCurrentScope _ _ env = env
 
-insertNewScope :: Map.Map String EvalValue -> EvalEnvironment -> EvalEnvironment
+insertNewScope :: Scope -> EvalEnvironment -> EvalEnvironment
 insertNewScope calls env = env {envCallStack = calls : envCallStack env}
 
 type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m) => m a
@@ -47,6 +49,14 @@ interpretLiteral LitNil = pure ValNil
 argToLabel :: Expr -> String
 argToLabel (ExprSymbol sym) = sym
 argToLabel _ = "_"
+
+valToNumber :: EvalValue -> Double
+valToNumber (ValNumber num) = num
+valToNumber (ValString num) = read num
+valToNumber (ValBool True) = 1
+valToNumber (ValQuoted (ExprLiteral (LitNumber n))) = n
+valToNumber (ValQuoted (ExprLiteral (LitString str))) = read str
+valToNumber _ = 0
 
 interpretExpression :: Expr -> Evaluator m EvalValue
 interpretExpression (ExprLiteral lit) = interpretLiteral lit
@@ -87,19 +97,39 @@ evaluateBuiltins "eval" (expr : _) = do
     ValQuoted quote -> Just <$> interpretExpression quote
     _ -> pure . Just $ res
 evaluateBuiltins "eval" _ = throwError $ TypeError "Invalid number of arguments sent to eval"
+evaluateBuiltins "+" exprs = do
+  values <- mapM interpretExpression exprs
+  pure . Just . ValNumber $ sumVals values 0
+  where
+    sumVals [] num = num
+    sumVals (arg : args) num = sumVals args $ num + valToNumber arg
+evaluateBuiltins "-" exprs = do
+  values <- mapM interpretExpression exprs
+  pure . Just . ValNumber $ case values of
+    [] -> 0
+    [x] -> -valToNumber x
+    _ -> diffVals values 0
+  where
+    diffVals [] num = num
+    diffVals (arg : args) num = diffVals args $ valToNumber arg - num
+evaluateBuiltins "eval" _ = throwError $ TypeError "Invalid number of arguments sent to eval"
 evaluateBuiltins _ _ = pure Nothing
+
+argsToScope :: [String] -> [Expr] -> (Expr -> Evaluator m EvalValue) -> Evaluator m Scope
+argsToScope labels argsE expToVal = do
+  args <- mapM expToVal argsE
+  pure $ Map.fromList $ labels `zip` args
 
 evaluateCall :: EvalValue -> [Expr] -> Evaluator m EvalValue
 evaluateCall (ValLambda labels body) argsE = do
-  args <- mapM interpretExpression argsE
-  let argSymbols = Map.fromList $ labels `zip` args
+  argsScope <- argsToScope labels argsE interpretExpression
   withSandboxedScope $ do
-    modify' $ insertNewScope argSymbols
+    modify' $ insertNewScope argsScope
     interpretExpression body
 evaluateCall (ValMacro labels body) argsE = do
-  let argSymbols = Map.fromList $ labels `zip` fmap ValQuoted argsE
+  argsScope <- argsToScope labels argsE (pure . ValQuoted)
   result <- withSandboxedScope $ do
-    modify' $ insertNewScope argSymbols
+    modify' $ insertNewScope argsScope
     interpretExpression body
   case result of
     ValQuoted expr -> interpretExpression expr

@@ -75,6 +75,8 @@ test-suite specs
   other-modules:
     TestUtils
     Specs.ParserSpec
+    Specs.InterpreterSpec
+    Specs.Integration.InterpreterSpec
   build-depends:
     lib-aether,
     hspec

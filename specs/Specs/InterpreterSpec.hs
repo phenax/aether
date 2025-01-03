@@ -13,7 +13,7 @@ test = do
   let evalExpr = runExprInterpreter
   let evalExprs = runInterpreter
 
-  fdescribe "interpreter" $ do
+  describe "interpreter" $ do
     context "when input is a literal" $ do
       it "evaluates successfully" $ do
         evalExpr (ExprLiteral $ LitBool True) `shouldReturn` Right (ValBool True)

@@ -33,7 +33,9 @@ instance Parsable Literal where
       numberP = LitNumber <$> numberUnsigned
         where
           numberUnsigned = do
-            sign <- maybe "" (: "") <$> P.optional (P.char '-')
+            -- TODO: Rethink signs
+            -- sign <- maybe "" (: "") <$> P.optional (P.char '-')
+            let sign = ""
             decimals <- P.some P.digitChar
             P.optional $ P.char '.'
             floating <- fromMaybe "0" <$> P.optional (P.some P.digitChar)
@@ -60,8 +62,8 @@ instance Parsable Expr where
 
       symbolP = ExprSymbol <$> ((:) <$> identStartChar <*> P.many identChar)
         where
-          identStartChar = P.satisfy $ \c -> isAlpha c || c `elem` (":_+=|?!@$%^&*/\\~." :: String)
-          identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` ("':-_+=|?!@#$%^&*/\\~." :: String)
+          identStartChar = P.satisfy $ \c -> isAlpha c || c `elem` (":-_+=|?!@$%^&*/\\~." :: String)
+          identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` ("'#:-_+=|?!@$%^&*/\\~." :: String)
 
 instance Parsable [Expr] where
   parse = P.manyTill parse P.eof

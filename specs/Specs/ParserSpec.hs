@@ -28,6 +28,13 @@ test = do
         ":hello" `shouldParse` ExprSymbol ":hello"
         "h#ello" `shouldParse` ExprSymbol "h#ello"
         "?hello" `shouldParse` ExprSymbol "?hello"
+        "..." `shouldParse` ExprSymbol "..."
+        "-" `shouldParse` ExprSymbol "-"
+        "+" `shouldParse` ExprSymbol "+"
+        "*" `shouldParse` ExprSymbol "*"
+        "/" `shouldParse` ExprSymbol "/"
+        "\\" `shouldParse` ExprSymbol "\\"
+        "|" `shouldParse` ExprSymbol "|"
         "(foobar? !wow)" `shouldParse` ExprSymList [ExprSymbol "foobar?", ExprSymbol "!wow"]
       context "whe symbol is invalid" $ do
         it "fails" $ do
@@ -36,13 +43,13 @@ test = do
     context "when input is a number" $ do
       it "parses number" $ do
         "0.0" `shouldParse` ExprLiteral (LitNumber 0)
+        -- "-208.3142" `shouldParse` ExprLiteral (LitNumber (-208.3142))
+        -- "-208" `shouldParse` ExprLiteral (LitNumber (-208))
+        -- "-208." `shouldParse` ExprLiteral (LitNumber (-208))
         "208" `shouldParse` ExprLiteral (LitNumber 208)
         "208." `shouldParse` ExprLiteral (LitNumber 208)
         "208.0" `shouldParse` ExprLiteral (LitNumber 208)
         "208.3142" `shouldParse` ExprLiteral (LitNumber 208.3142)
-        "-208.3142" `shouldParse` ExprLiteral (LitNumber (-208.3142))
-        "-208" `shouldParse` ExprLiteral (LitNumber (-208))
-        "-208." `shouldParse` ExprLiteral (LitNumber (-208))
 
     context "when input is a string literal" $ do
       it "parses string" $ do

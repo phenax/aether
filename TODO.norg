@@ -1,6 +1,11 @@
 * Current
   - (x) Simple parser
-  - ( ) Simple interpreter
+  - (x) Simple interpreter
+  - ( ) Math operations
+  - ( ) Simple stdlib
+  - ( ) List operations
+  - ( ) Quasiquotes
+  - ( ) Tests for defmacro
 
 * Later
   - ( ) Repl
