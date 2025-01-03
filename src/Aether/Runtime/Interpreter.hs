@@ -89,25 +89,54 @@ evaluateBuiltins "do" body = do
   pure $ Just $ case results of
     [] -> ValNil
     _ -> last results
-evaluateBuiltins "eval" (expr : _) = do
+evaluateBuiltins "eval" [expr] = do
   res <- interpretExpression expr
   case res of
     ValQuoted quote -> Just <$> interpretExpression quote
     _ -> pure . Just $ res
 evaluateBuiltins "eval" _ = throwError $ TypeError "Invalid number of arguments sent to eval"
-evaluateBuiltins "+" exprs = do
-  values <- mapM interpretExpression exprs
-  pure . Just . ValNumber $ sumVals values
-evaluateBuiltins "-" exprs = do
-  values <- mapM interpretExpression exprs
-  pure . Just . ValNumber $ case values of
-    [] -> 0
-    [x] -> -valToNumber x
-    (x : xs) -> valToNumber x - sumVals xs
+evaluateBuiltins "+" exprs = Just <$> operateOnExprs (ValNumber . sum . fmap valToNumber) exprs
+evaluateBuiltins "*" exprs = Just <$> operateOnExprs (ValNumber . product . fmap valToNumber) exprs
+evaluateBuiltins "-" exprs = Just <$> operateOnExprs (ValNumber . subtractVal . fmap valToNumber) exprs
+  where
+    subtractVal [] = 0
+    subtractVal [x] = -x
+    subtractVal (x : xs) = x - sum xs
+evaluateBuiltins "/" exprs = Just <$> operateOnExprs (ValNumber . divideVal . fmap valToNumber) exprs
+  where
+    divideVal [] = 1
+    divideVal (x : xs) = x / product xs
+evaluateBuiltins "lt?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a <)) exp1 exp2
+evaluateBuiltins "lt?" _ = throwError $ TypeError "Invalid number of arguments for lt?"
+evaluateBuiltins "gt?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a >)) exp1 exp2
+evaluateBuiltins "gt?" _ = throwError $ TypeError "Invalid number of arguments for gt?"
+evaluateBuiltins "lte?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a <=)) exp1 exp2
+evaluateBuiltins "lte?" _ = throwError $ TypeError "Invalid number of arguments for lte?"
+evaluateBuiltins "gte?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a >=)) exp1 exp2
+evaluateBuiltins "gte?" _ = throwError $ TypeError "Invalid number of arguments for gte?"
+evaluateBuiltins "eq?" exprs = Just <$> operateOnExprs (ValBool . checkIfAllEqual) exprs
 evaluateBuiltins _ _ = pure Nothing
 
-sumVals :: [EvalValue] -> Double
-sumVals = foldl (\n arg -> n + valToNumber arg) 0
+checkIfAllEqual :: [EvalValue] -> Bool
+checkIfAllEqual [] = False
+checkIfAllEqual [_] = True
+checkIfAllEqual (x1 : x2 : xs) = checkIfEqual x1 x2 && checkIfAllEqual (x2 : xs)
+
+checkIfEqual :: EvalValue -> EvalValue -> Bool
+checkIfEqual (ValNumber v1) (ValNumber v2) = v1 == v2
+checkIfEqual (ValString v1) (ValString v2) = v1 == v2
+checkIfEqual (ValBool v1) (ValBool v2) = v1 == v2
+checkIfEqual ValNil ValNil = True
+checkIfEqual _ _ = False
+
+numberBinaryOp :: (Double -> Double -> EvalValue) -> Expr -> Expr -> Evaluator m EvalValue
+numberBinaryOp fn exp1 exp2 = do
+  v1 <- valToNumber <$> interpretExpression exp1
+  v2 <- valToNumber <$> interpretExpression exp2
+  pure $ fn v1 v2
+
+operateOnExprs :: ([EvalValue] -> EvalValue) -> [Expr] -> Evaluator m EvalValue
+operateOnExprs fn exprs = fn <$> mapM interpretExpression exprs
 
 evaluateCall :: EvalValue -> [Expr] -> Evaluator m EvalValue
 evaluateCall (ValLambda labels body) argsE = do

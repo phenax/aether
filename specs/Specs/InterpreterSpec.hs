@@ -86,3 +86,12 @@ test = do
                   ExprSymList [ExprSymbol "foobar", ExprLiteral $ LitNumber 42, ExprLiteral $ LitNumber 99]
                 ]
           evalExprs exprs `shouldReturn` Right [ValNil, ValNil]
+
+    context "when calling eval" $ do
+      it "returns with the last expression in body" $ do
+        let expr =
+              ExprSymList
+                [ ExprSymbol "eval",
+                  ExprQuoted $ ExprSymList [ExprSymbol "-", ExprLiteral $ LitNumber 200, ExprLiteral $ LitNumber 15]
+                ]
+        evalExpr expr `shouldReturn` Right (ValNumber 185)
