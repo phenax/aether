@@ -2,7 +2,6 @@ module Aether.Syntax.Parser where
 
 import Aether.Types
 import Control.Applicative ((<|>))
-import Control.Monad (void)
 import Control.Monad.Identity (Identity)
 import Data.Char (isAlpha, isAlphaNum)
 import Data.List ((\\))
@@ -38,13 +37,10 @@ instance Parsable Literal where
       numberP = LitNumber <$> numberUnsigned
         where
           numberUnsigned = do
-            -- TODO: Rethink signs
-            -- sign <- maybe "" (: "") <$> P.optional (P.char '-')
-            let sign = ""
             decimals <- P.some P.digitChar
             P.optional $ P.char '.'
             floating <- fromMaybe "0" <$> P.optional (P.some P.digitChar)
-            pure . read $ sign ++ decimals ++ "." ++ floating
+            pure . read $ decimals ++ "." ++ floating
 
       stringP =
         LitString <$> do

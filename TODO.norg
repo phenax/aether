@@ -9,6 +9,7 @@
   - ( ) Var args
   - ( ) Stack trace
   - ( ) Improve spec
+  - ( ) Shortcircuiting for &&, ||, eq?
 
 * Later
   - ( ) Repl

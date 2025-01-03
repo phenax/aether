@@ -13,6 +13,9 @@ source-repository head
   type:     git
   location: https://github.com/phenax/aether-lang.git
 
+extra-source-files:
+  stdlib/*.rkt
+
 common common-config
   default-extensions:
     ExplicitForAll
@@ -64,6 +67,8 @@ library lib-aether
     Aether
     Aether.Runtime
     Aether.Runtime.Interpreter
+    Aether.Runtime.Value
+    Aether.Runtime.Scope
     Aether.Syntax.Parser
     Aether.Types
 

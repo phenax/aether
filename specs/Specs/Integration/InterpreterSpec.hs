@@ -1,13 +1,10 @@
 module Specs.Integration.InterpreterSpec where
 
-import Aether.Runtime (runExprInterpreter, runInterpreter)
-import Aether.Runtime.Interpreter (interpretExpression, runExprEvaluatorWithCallStack)
+import Aether.Runtime (runInterpreter)
 import Aether.Syntax.Parser
 import Aether.Types
-import Data.Either (isLeft)
 import Data.String.Interpolate.IsString
 import Test.Hspec
-import TestUtils
 import Text.Megaparsec (errorBundlePretty)
 
 test :: SpecWith ()

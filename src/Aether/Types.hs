@@ -1,8 +1,9 @@
 module Aether.Types where
 
+import Control.Monad.Except (MonadError)
+import Control.Monad.RWS (MonadState)
 import qualified Data.Map as Map
-import Language.Haskell.TH.Lift (Lift, deriveLift, deriveLiftMany)
-import qualified Text.Megaparsec as P
+import Language.Haskell.TH.Lift (deriveLiftMany)
 
 data Literal
   = LitString String
@@ -44,5 +45,7 @@ instance Semigroup EvalEnvironment where
 
 instance Monoid EvalEnvironment where
   mempty = EvalEnvironment {envCallStack = [Map.empty]}
+
+type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m) => m a
 
 $(deriveLiftMany [''Literal, ''Expr, ''EvalValue, ''EvalError, ''EvalEnvironment])
