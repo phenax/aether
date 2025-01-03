@@ -70,6 +70,42 @@ test = do
       it "parses quoted number" $ do
         "'345.4" `shouldParse` ExprQuoted (ExprLiteral $ LitNumber 345.4)
 
+    context "when input contains single line comments" $ do
+      it "ignores comments" $ do
+        "#nil ; Some comment" `shouldParse` ExprLiteral LitNil
+        [i|
+          ; Start comment
+          (foobar
+            2 ; comment on this line
+            (+ 2 3) ; comment on this line
+          ) ; End comment
+          |]
+          `shouldParse` ExprSymList
+            [ ExprSymbol "foobar",
+              ExprLiteral $ LitNumber 2,
+              ExprSymList [ExprSymbol "+", ExprLiteral $ LitNumber 2, ExprLiteral $ LitNumber 3]
+            ]
+    context "when input contains multi line comments" $ do
+      it "ignores comments" $ do
+        [i|
+          #| start
+          comment
+           |#
+          (foobar
+            2 #| comment on this line |#
+            (+ 2 3) #| comment on this line
+            and this one
+            |#
+          ) #|
+          end comment
+           |#
+             |]
+          `shouldParse` ExprSymList
+            [ ExprSymbol "foobar",
+              ExprLiteral $ LitNumber 2,
+              ExprSymList [ExprSymbol "+", ExprLiteral $ LitNumber 2, ExprLiteral $ LitNumber 3]
+            ]
+
     context "when input is quoted s-expr" $ do
       it "parses quoted s-expr" $ do
         [i|'(2 (3 4) "wow")|]

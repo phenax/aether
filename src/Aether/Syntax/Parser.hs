@@ -9,9 +9,9 @@ import Data.List ((\\))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Void (Void)
-import Language.Haskell.TH.Lift (deriveLiftMany)
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
+import qualified Text.Megaparsec.Char.Lexer as L
 
 type ParseError = P.ParseErrorBundle Text Void
 
@@ -23,7 +23,10 @@ class Parsable a where
   parse :: Parser a
 
 spaceConsumer :: Parser ()
-spaceConsumer = void $ P.many (P.newline <|> P.spaceChar <|> P.tab)
+spaceConsumer = L.space P.space1 singleLineComment multiLineComment
+  where
+    singleLineComment = L.skipLineComment ";"
+    multiLineComment = L.skipBlockComment "#|" "|#"
 
 instance Parsable Literal where
   parse = boolP <|> nilP <|> stringP <|> numberP

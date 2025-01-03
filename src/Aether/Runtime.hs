@@ -5,7 +5,6 @@ import Aether.Syntax.Parser (parseAll)
 import Aether.Types
 import Control.Monad (foldM, forM)
 import Control.Monad.IO.Class (MonadIO)
-import Data.FileEmbed (embedFile)
 import qualified Data.Text as Text
 import Language.Haskell.TH (runIO)
 import Language.Haskell.TH.Syntax (Lift (lift), Q (Q))
