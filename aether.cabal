@@ -78,6 +78,7 @@ test-suite specs
     Specs.ParserSpec
     Specs.InterpreterSpec
     Specs.Integration.InterpreterSpec
+    Specs.Integration.StdlibSpec
   build-depends:
     lib-aether,
     hspec

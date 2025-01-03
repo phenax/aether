@@ -22,7 +22,9 @@
               ./aether.cabal
             ];
           });
-          otherFiles = [ ];
+          otherFiles = [
+            { source = ./stdlib; target = "stdlib"; }
+          ];
           configurationFlags = [ "--ghc-options=-O2" ];
           buildInputs = with pkgs; [
             pkg-config

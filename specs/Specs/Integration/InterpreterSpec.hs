@@ -86,3 +86,22 @@ test = do
               ValBool True,
               ValBool False
             ]
+
+    context "with boolean operators" $ do
+      it "evaluates successfully" $ do
+        evalExpr
+          [i|
+            (&& #T #T #F) (&& #T #T #T) (&&)
+            (|| #F #F #T) (|| #F #F #F) (||)
+            (not #T) (not #F)
+          |]
+          `shouldReturn` Right
+            [ ValBool False,
+              ValBool True,
+              ValBool True,
+              ValBool True,
+              ValBool False,
+              ValBool False,
+              ValBool False,
+              ValBool True
+            ]

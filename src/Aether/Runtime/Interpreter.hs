@@ -53,6 +53,10 @@ valToNumber (ValQuoted (ExprLiteral (LitNumber n))) = n
 valToNumber (ValQuoted (ExprLiteral (LitString str))) = read str
 valToNumber _ = 0
 
+valToBool :: EvalValue -> Bool
+valToBool (ValBool bool) = bool
+valToBool _ = True
+
 interpretExpression :: Expr -> Evaluator m EvalValue
 interpretExpression (ExprLiteral lit) = interpretLiteral lit
 interpretExpression (ExprQuoted (ExprSymList [])) = pure ValNil
@@ -69,19 +73,24 @@ evaluateBuiltins "set" [ExprSymbol name, valueE] = do
   modify' $ defineInCurrentScope name value
   pure $ Just value
 evaluateBuiltins "set" _ = throwError $ TypeError "Invalid call to set"
+--
 evaluateBuiltins "->" (ExprSymList argsE : body) = do
   let lambda = ValLambda (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
   pure $ Just lambda
+evaluateBuiltins "->" _ = throwError $ TypeError "Invalid call to ->"
+--
 evaluateBuiltins "defmacro" (ExprSymList (ExprSymbol name : argsE) : body) = do
   let macro = ValMacro (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
   modify' $ defineInCurrentScope name macro
   pure $ Just ValNil
 evaluateBuiltins "defmacro" _ = throwError $ TypeError "Invalid call to defmacro"
+--
 evaluateBuiltins "define" (ExprSymList (ExprSymbol name : argsE) : body) = do
   let value = ValLambda (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
   modify' $ defineInCurrentScope name value
   pure $ Just ValNil
 evaluateBuiltins "define" _ = throwError $ TypeError "Invalid call to define"
+--
 evaluateBuiltins "do" body = do
   results <- withSandboxedScope $ do
     modify' $ insertNewScope Map.empty
@@ -89,12 +98,14 @@ evaluateBuiltins "do" body = do
   pure $ Just $ case results of
     [] -> ValNil
     _ -> last results
+--
 evaluateBuiltins "eval" [expr] = do
   res <- interpretExpression expr
   case res of
     ValQuoted quote -> Just <$> interpretExpression quote
     _ -> pure . Just $ res
 evaluateBuiltins "eval" _ = throwError $ TypeError "Invalid number of arguments sent to eval"
+--
 evaluateBuiltins "+" exprs = Just <$> operateOnExprs (ValNumber . sum . fmap valToNumber) exprs
 evaluateBuiltins "*" exprs = Just <$> operateOnExprs (ValNumber . product . fmap valToNumber) exprs
 evaluateBuiltins "-" exprs = Just <$> operateOnExprs (ValNumber . subtractVal . fmap valToNumber) exprs
@@ -106,6 +117,7 @@ evaluateBuiltins "/" exprs = Just <$> operateOnExprs (ValNumber . divideVal . fm
   where
     divideVal [] = 1
     divideVal (x : xs) = x / product xs
+--
 evaluateBuiltins "lt?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a <)) exp1 exp2
 evaluateBuiltins "lt?" _ = throwError $ TypeError "Invalid number of arguments for lt?"
 evaluateBuiltins "gt?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a >)) exp1 exp2
@@ -115,6 +127,12 @@ evaluateBuiltins "lte?" _ = throwError $ TypeError "Invalid number of arguments 
 evaluateBuiltins "gte?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a >=)) exp1 exp2
 evaluateBuiltins "gte?" _ = throwError $ TypeError "Invalid number of arguments for gte?"
 evaluateBuiltins "eq?" exprs = Just <$> operateOnExprs (ValBool . checkIfAllEqual) exprs
+evaluateBuiltins "not" [expr] = Just . ValBool . not . valToBool <$> interpretExpression expr
+evaluateBuiltins "not" _ = throwError $ TypeError "Invalid number of arguments for !"
+-- TODO: Implement short citcuiting
+evaluateBuiltins "&&" exprs = Just <$> operateOnExprs (ValBool . all valToBool) exprs
+evaluateBuiltins "||" exprs = Just <$> operateOnExprs (ValBool . any valToBool) exprs
+--
 evaluateBuiltins _ _ = pure Nothing
 
 checkIfAllEqual :: [EvalValue] -> Bool

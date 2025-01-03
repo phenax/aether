@@ -1,13 +1,14 @@
 * Current
   - (x) Simple parser
   - (x) Simple interpreter
-  - ( ) Math operations
-  - ( ) Simple stdlib
-  - ( ) List operations
+  - (x) Math operations
+  - (x) Simple stdlib
   - ( ) Quasiquotes
+  - ( ) List operations
   - ( ) Tests for defmacro
   - ( ) Var args
   - ( ) Stack trace
+  - ( ) Improve spec
 
 * Later
   - ( ) Repl
