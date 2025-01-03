@@ -74,6 +74,9 @@ evaluateBuiltins "set" [ExprSymbol name, valueE] = do
   modify' $ defineInCurrentScope name value
   pure $ Just value
 evaluateBuiltins "set" _ = throwError $ TypeError "Invalid call to set"
+evaluateBuiltins "->" (ExprSymList argsE : body) = do
+  let lambda = ValLambda (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
+  pure $ Just lambda
 evaluateBuiltins "defmacro" (ExprSymList (ExprSymbol name : argsE) : body) = do
   let macro = ValMacro (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
   modify' $ defineInCurrentScope name macro
@@ -112,7 +115,6 @@ evaluateBuiltins "-" exprs = do
   where
     diffVals [] num = num
     diffVals (arg : args) num = diffVals args $ valToNumber arg - num
-evaluateBuiltins "eval" _ = throwError $ TypeError "Invalid number of arguments sent to eval"
 evaluateBuiltins _ _ = pure Nothing
 
 argsToScope :: [String] -> [Expr] -> (Expr -> Evaluator m EvalValue) -> Evaluator m Scope

@@ -5,6 +5,7 @@ import Control.Applicative ((<|>))
 import Control.Monad (void)
 import Control.Monad.Identity (Identity)
 import Data.Char (isAlpha, isAlphaNum)
+import Data.List ((\\))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Void (Void)
@@ -62,8 +63,10 @@ instance Parsable Expr where
 
       symbolP = ExprSymbol <$> ((:) <$> identStartChar <*> P.many identChar)
         where
-          identStartChar = P.satisfy $ \c -> isAlpha c || c `elem` (":-_+=|?!@$%^&*/\\~." :: String)
-          identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` ("'#:-_+=|?!@$%^&*/\\~." :: String)
+          validIdentSpecialChars = ":-_+=|?!@$%^&*/\\~.'#<>"
+          invalidStartChars = "'#<>"
+          identStartChar = P.satisfy $ \c -> isAlpha c || c `elem` (validIdentSpecialChars \\ invalidStartChars)
+          identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` (validIdentSpecialChars :: String)
 
 instance Parsable [Expr] where
   parse = P.manyTill parse P.eof

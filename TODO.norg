@@ -6,6 +6,7 @@
   - ( ) List operations
   - ( ) Quasiquotes
   - ( ) Tests for defmacro
+  - ( ) Var args
 
 * Later
   - ( ) Repl
