@@ -3,12 +3,12 @@
   - (x) Simple interpreter
   - (x) Math operations
   - (x) Simple stdlib
-  - ( ) Quasiquotes
+  - (x) Quasiquotes
   - ( ) List operations
   - ( ) Tests for defmacro
   - ( ) Var args
   - ( ) Stack trace
-  - ( ) Improve spec
+  - ( ) Cleanup your shitty spec
   - ( ) Shortcircuiting for &&, ||, eq?
 
 * Later

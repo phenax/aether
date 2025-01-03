@@ -17,14 +17,20 @@ interpretLiteral = \case
 interpretExpression :: Expr -> Evaluator m EvalValue
 interpretExpression = \case
   (ExprLiteral lit) -> interpretLiteral lit
-  (ExprQuoted (ExprSymList [])) -> pure ValNil
-  (ExprQuoted quote) -> pure $ ValQuoted quote
   (ExprSymbol sym) -> gets (lookupSymbol sym) >>= maybe (throwError $ NameNotFound sym) pure
   (ExprSymList []) -> pure ValNil
   (ExprSymList (ExprSymbol name : argsE)) -> do
     let evalSymbol = interpretExpression (ExprSymbol name) >>= (`evaluateCall` argsE)
     evaluateBuiltins name argsE >>= maybe evalSymbol pure
   (ExprSymList (fnE : argsE)) -> interpretExpression fnE >>= (`evaluateCall` argsE)
+  (ExprUnquoted expr) -> interpretExpression expr
+  (ExprValue value) -> pure value
+  (ExprQuoted (ExprSymList [])) -> pure ValNil
+  (ExprQuoted quote) -> ValQuoted <$> evalUnquotes quote
+    where
+      evalUnquotes (ExprUnquoted expr) = ExprValue <$> interpretExpression expr
+      evalUnquotes (ExprSymList exprs) = ExprSymList <$> mapM evalUnquotes exprs
+      evalUnquotes expr = pure expr
 
 evaluateBuiltins :: String -> [Expr] -> Evaluator m (Maybe EvalValue)
 -- Set a value in current scope
@@ -35,24 +41,26 @@ evaluateBuiltins "set" [ExprSymbol name, valueE] = do
 evaluateBuiltins "set" _ = do throwError $ TypeError "Invalid call to set"
 
 -- Lambda expression syntax
-evaluateBuiltins "->" (ExprSymList argsE : body) = do
-  let lambda = ValLambda (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
-  pure $ Just lambda
+evaluateBuiltins "->" (ExprSymList argsE : bodyE) =
+  pure . Just $ ValLambda argLabels body
+  where
+    argLabels = argToLabel <$> argsE
+    body = ExprSymList (ExprSymbol "do" : bodyE)
 evaluateBuiltins "->" _ = do throwError $ TypeError "Invalid call to ->"
 
--- Define macro in current scope
-evaluateBuiltins "defmacro" (ExprSymList (ExprSymbol name : argsE) : body) = do
-  let macro = ValMacro (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
-  modify' $ defineInCurrentScope name macro
-  pure $ Just ValNil
-evaluateBuiltins "defmacro" _ = do throwError $ TypeError "Invalid call to defmacro"
-
 -- Define lambda in current scope
-evaluateBuiltins "define" (ExprSymList (ExprSymbol name : argsE) : body) = do
-  let value = ValLambda (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
-  modify' $ defineInCurrentScope name value
-  pure $ Just ValNil
+evaluateBuiltins "define" (ExprSymList (ExprSymbol name : argsE) : body) =
+  Just ValNil <$ modify' (defineInCurrentScope name lambda)
+  where
+    lambda = ValLambda (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
 evaluateBuiltins "define" _ = do throwError $ TypeError "Invalid call to define"
+
+-- Define macro in current scope
+evaluateBuiltins "defmacro" (ExprSymList (ExprSymbol name : argsE) : body) =
+  Just ValNil <$ modify' (defineInCurrentScope name macro)
+  where
+    macro = ValMacro (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
+evaluateBuiltins "defmacro" _ = do throwError $ TypeError "Invalid call to defmacro"
 
 -- Do syntax (chained expressions)
 evaluateBuiltins "do" body = do

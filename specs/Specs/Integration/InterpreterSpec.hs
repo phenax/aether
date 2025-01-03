@@ -102,3 +102,22 @@ test = do
               ValBool False,
               ValBool True
             ]
+
+    context "quasiquotes" $ do
+      it "evaluates unquotes" $ do
+        evalExpr
+          [i|
+            (set foobar 20)
+            '(hello ,(+ 20 3) world ,foobar)
+          |]
+          `shouldReturn` Right
+            [ ValNumber 20,
+              ValQuoted
+                ( ExprSymList
+                    [ ExprSymbol "hello",
+                      ExprValue (ValNumber 23),
+                      ExprSymbol "world",
+                      ExprValue (ValNumber 20)
+                    ]
+                )
+            ]

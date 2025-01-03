@@ -13,20 +13,22 @@ data Literal
   deriving (Show, Eq)
 
 data Expr
-  = ExprSymList [Expr]
-  | ExprSymbol String
+  = ExprLiteral Literal
   | ExprQuoted Expr
-  | ExprLiteral Literal
+  | ExprSymList [Expr]
+  | ExprSymbol String
+  | ExprUnquoted Expr
+  | ExprValue EvalValue
   deriving (Show, Eq)
 
 data EvalValue
-  = ValString String
-  | ValBool Bool
-  | ValNumber Double
-  | ValQuoted Expr
+  = ValBool Bool
   | ValLambda [String] Expr
   | ValMacro [String] Expr
   | ValNil
+  | ValNumber Double
+  | ValQuoted Expr
+  | ValString String
   deriving (Show, Eq)
 
 data EvalError

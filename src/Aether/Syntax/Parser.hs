@@ -47,7 +47,7 @@ instance Parsable Literal where
           P.between (P.char '"') (P.char '"') $ P.many (P.satisfy (/= '"'))
 
 instance Parsable Expr where
-  parse = spaceConsumer >> (quotedP <|> literalP <|> symExprP <|> symbolP) <* spaceConsumer
+  parse = spaceConsumer >> (quotedP <|> unQuotedP <|> literalP <|> symExprP <|> symbolP) <* spaceConsumer
     where
       literalP = ExprLiteral <$> parse
 
@@ -60,6 +60,8 @@ instance Parsable Expr where
           braces = P.between (P.char '{') (P.char '}')
 
       quotedP = ExprQuoted <$> (P.char '\'' >> parse)
+
+      unQuotedP = ExprUnquoted <$> (P.char ',' >> parse)
 
       symbolP = ExprSymbol <$> ((:) <$> identStartChar <*> P.many identChar)
         where
