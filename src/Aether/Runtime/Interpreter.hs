@@ -4,17 +4,7 @@ import Aether.Types
 import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
 import Control.Monad.State (MonadIO, MonadState (get, put), StateT (runStateT), gets, modify')
 import qualified Data.Map as Map
-
-type Scope = Map.Map String EvalValue
-
-newtype EvalEnvironment = EvalEnvironment {envCallStack :: [Scope]}
-  deriving (Show, Eq)
-
-instance Semigroup EvalEnvironment where
-  (<>) a b = EvalEnvironment {envCallStack = envCallStack a <> envCallStack b}
-
-instance Monoid EvalEnvironment where
-  mempty = EvalEnvironment {envCallStack = [Map.empty]}
+import qualified Debug.Trace as Debug
 
 defineInCurrentScope :: String -> EvalValue -> EvalEnvironment -> EvalEnvironment
 defineInCurrentScope name value env@(EvalEnvironment {envCallStack = (headStack : rest)}) =
@@ -49,6 +39,11 @@ interpretLiteral LitNil = pure ValNil
 argToLabel :: Expr -> String
 argToLabel (ExprSymbol sym) = sym
 argToLabel _ = "_"
+
+argsToScope :: [String] -> [Expr] -> (Expr -> Evaluator m EvalValue) -> Evaluator m Scope
+argsToScope labels argsE expToVal = do
+  args <- mapM expToVal argsE
+  pure $ Map.fromList $ labels `zip` args
 
 valToNumber :: EvalValue -> Double
 valToNumber (ValNumber num) = num
@@ -102,25 +97,17 @@ evaluateBuiltins "eval" (expr : _) = do
 evaluateBuiltins "eval" _ = throwError $ TypeError "Invalid number of arguments sent to eval"
 evaluateBuiltins "+" exprs = do
   values <- mapM interpretExpression exprs
-  pure . Just . ValNumber $ sumVals values 0
-  where
-    sumVals [] num = num
-    sumVals (arg : args) num = sumVals args $ num + valToNumber arg
+  pure . Just . ValNumber $ sumVals values
 evaluateBuiltins "-" exprs = do
   values <- mapM interpretExpression exprs
   pure . Just . ValNumber $ case values of
     [] -> 0
     [x] -> -valToNumber x
-    _ -> diffVals values 0
-  where
-    diffVals [] num = num
-    diffVals (arg : args) num = diffVals args $ valToNumber arg - num
+    (x : xs) -> valToNumber x - sumVals xs
 evaluateBuiltins _ _ = pure Nothing
 
-argsToScope :: [String] -> [Expr] -> (Expr -> Evaluator m EvalValue) -> Evaluator m Scope
-argsToScope labels argsE expToVal = do
-  args <- mapM expToVal argsE
-  pure $ Map.fromList $ labels `zip` args
+sumVals :: [EvalValue] -> Double
+sumVals = foldl (\n arg -> n + valToNumber arg) 0
 
 evaluateCall :: EvalValue -> [Expr] -> Evaluator m EvalValue
 evaluateCall (ValLambda labels body) argsE = do
@@ -144,8 +131,8 @@ interpretAll = mapM interpretExpression
 runExprEvaluatorWithCallStack :: (MonadIO m) => ExceptT EvalError (StateT EvalEnvironment m) a -> EvalEnvironment -> m (Either EvalError a, EvalEnvironment)
 runExprEvaluatorWithCallStack = runStateT . runExceptT
 
-runExprInterpreter :: (MonadIO m) => Expr -> m (Either EvalError EvalValue)
-runExprInterpreter = fmap fst . (`runExprEvaluatorWithCallStack` mempty) . interpretExpression
+runInterpreterRaw :: (MonadIO m) => EvalEnvironment -> [Expr] -> m (Either EvalError [EvalValue], EvalEnvironment)
+runInterpreterRaw env = (`runExprEvaluatorWithCallStack` env) . interpretAll
 
-runInterpreter :: (MonadIO m) => [Expr] -> m (Either EvalError [EvalValue])
-runInterpreter = fmap fst . (`runExprEvaluatorWithCallStack` mempty) . interpretAll
+runExprInterpreterRaw :: (MonadIO m) => EvalEnvironment -> Expr -> m (Either EvalError EvalValue, EvalEnvironment)
+runExprInterpreterRaw env = (`runExprEvaluatorWithCallStack` env) . interpretExpression

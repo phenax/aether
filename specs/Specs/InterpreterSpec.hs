@@ -1,6 +1,7 @@
 module Specs.InterpreterSpec where
 
-import Aether.Runtime.Interpreter (interpretExpression, runExprEvaluatorWithCallStack, runExprInterpreter, runInterpreter)
+import Aether.Runtime (runExprInterpreter, runInterpreter)
+import Aether.Runtime.Interpreter (interpretExpression, runExprEvaluatorWithCallStack)
 import Aether.Syntax.Parser
 import Aether.Types
 import Data.Either (isLeft)

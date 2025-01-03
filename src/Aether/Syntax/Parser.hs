@@ -9,6 +9,7 @@ import Data.List ((\\))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Void (Void)
+import Language.Haskell.TH.Lift (deriveLiftMany)
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
 

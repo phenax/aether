@@ -42,6 +42,7 @@ common common-config
     megaparsec <= 9.7.0,
     mtl == 2.3.1,
     template-haskell,
+    th-lift <= 0.8.6,
     text
 
 common warnings
@@ -62,6 +63,7 @@ library lib-aether
   hs-source-dirs: src
   exposed-modules:
     Aether
+    Aether.Runtime
     Aether.Runtime.Interpreter
     Aether.Syntax.Parser
     Aether.Types
