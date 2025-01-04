@@ -33,6 +33,7 @@ standardLib =
              case result of
                Right ast -> pure $ parsed ++ ast
                Left e -> error $ errorBundlePretty e
+           libFiles = ["./stdlib/core.rkt", "./stdlib/list.rkt"]
 
-       foldM loadCodeInEnv mempty ["./stdlib/core.rkt"] >>= lift
+       foldM loadCodeInEnv mempty libFiles >>= lift
    )
