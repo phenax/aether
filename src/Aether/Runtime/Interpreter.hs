@@ -6,6 +6,7 @@ import Aether.Types
 import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
 import Control.Monad.State (MonadIO, MonadState (get), StateT (runStateT), gets, modify')
 import qualified Data.Map as Map
+import qualified Debug.Trace as Debug
 
 interpretLiteral :: Literal -> Evaluator m EvalValue
 interpretLiteral = \case
@@ -38,7 +39,7 @@ evaluateBuiltins "set" [ExprSymbol name, valueE] = do
   value <- interpretExpression valueE
   modify' $ defineInCurrentScope name value
   pure $ Just value
-evaluateBuiltins "set" _ = do throwError $ TypeError "Invalid call to set"
+evaluateBuiltins "set" args = do throwError $ TypeError $ "Invalid call to set :" ++ show args
 
 -- Lambda expression syntax
 evaluateBuiltins "->" (ExprSymList argsE : bodyE) = do
@@ -115,7 +116,7 @@ evaluateBuiltins "cons" [itemE, restE] = do
     ValNil -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
     ValQuoted (ExprLiteral LitNil) -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
     _ -> pure . Just $ ValQuoted (ExprSymList [ExprValue item, ExprValue rest])
-evaluateBuiltins "cons" _ = do throwError $ TypeError "Invalid number of arguments sent to const"
+evaluateBuiltins "cons" _ = do throwError $ TypeError "Invalid number of arguments sent to cons"
 
 -- Math operations
 evaluateBuiltins "+" exprs = Just <$> operateOnExprs (ValNumber . sum . fmap valToNumber) exprs
@@ -145,8 +146,21 @@ evaluateBuiltins "not" [expr] = Just . ValBool . not . valToBool <$> interpretEx
 evaluateBuiltins "not" _ = throwError $ TypeError "Invalid number of arguments for not"
 evaluateBuiltins "&&" exprs = Just <$> operateOnExprs (ValBool . all valToBool) exprs
 evaluateBuiltins "||" exprs = Just <$> operateOnExprs (ValBool . any valToBool) exprs
+-- Type helpers
+evaluateBuiltins "type" [expr] = Just . ValQuoted . ExprSymbol . typeOfValue <$> interpretExpression expr
+evaluateBuiltins "lt?" _ = throwError $ TypeError "Invalid number of arguments for lt?"
 --
 evaluateBuiltins _ _ = pure Nothing
+
+typeOfValue :: EvalValue -> String
+typeOfValue (ValBool _) = "boolean"
+typeOfValue (ValNumber _) = "number"
+typeOfValue (ValString _) = "string"
+typeOfValue (ValLambda {}) = "function"
+typeOfValue (ValMacro {}) = "macro"
+typeOfValue (ValQuoted (ExprSymList _)) = "list"
+typeOfValue (ValQuoted {}) = "quote"
+typeOfValue ValNil = "list"
 
 numberBinaryOp :: (Double -> Double -> EvalValue) -> Expr -> Expr -> Evaluator m EvalValue
 numberBinaryOp fn exp1 exp2 = do
@@ -169,9 +183,16 @@ evaluateCall (ValMacro (Stack _stack) labels body) argsE = do
   (Stack scope1) <- gets envCallStack
   argsScope <- argsToScope labels argsE (pure . ValQuoted)
   result <- closure (Stack $ argsScope : scope1) $ interpretExpression body
+  -- Debug.traceShowM result
   case result of
-    ValQuoted expr -> interpretExpression expr
+    ValQuoted expr -> interpretExpression $ unwrapQuotes expr
     _ -> pure result
+  where
+    unwrapQuotes :: Expr -> Expr
+    unwrapQuotes (ExprSymList exprs) = ExprSymList $ map unwrapQuotes exprs
+    unwrapQuotes (ExprValue (ValQuoted (ExprSymList exprs))) = ExprSymList $ map unwrapQuotes exprs
+    unwrapQuotes (ExprValue (ValQuoted e)) = e
+    unwrapQuotes e = e
 
 -- Booleans are callable (Kite/Kestral)
 evaluateCall (ValBool bool) argsE = do
@@ -179,7 +200,7 @@ evaluateCall (ValBool bool) argsE = do
     (then_ : _) | bool -> interpretExpression then_
     (_ : else_ : _) | not bool -> interpretExpression else_
     _ -> pure ValNil
-evaluateCall value _args = pure value
+evaluateCall value _args = throwError $ TypeError $ "Can't call value " ++ show value
 
 interpretAll :: [Expr] -> Evaluator m [EvalValue]
 interpretAll = mapM interpretExpression

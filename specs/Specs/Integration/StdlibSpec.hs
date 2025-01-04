@@ -112,3 +112,47 @@ test = do
               ),
             ValQuoted $ ExprSymList []
           ]
+
+  describe "core > concat" $ do
+    it "concatenates 2 lists" $ do
+      evalExpr
+        [i|
+          (concat [list 1 2 3] [list 4 5 6])
+          (concat '[] [list 4 5 6])
+          (concat [list 1 2 3] '[])
+        |]
+        `shouldReturn` Right
+          [ ValQuoted $
+              ExprSymList
+                [ ExprValue (ValNumber 1),
+                  ExprValue (ValNumber 2),
+                  ExprValue (ValNumber 3),
+                  ExprValue (ValNumber 4),
+                  ExprValue (ValNumber 5),
+                  ExprValue (ValNumber 6)
+                ],
+            ValQuoted $
+              ExprSymList
+                [ ExprValue (ValNumber 4),
+                  ExprValue (ValNumber 5),
+                  ExprValue (ValNumber 6)
+                ],
+            ValQuoted $
+              ExprSymList
+                [ ExprValue (ValNumber 1),
+                  ExprValue (ValNumber 2),
+                  ExprValue (ValNumber 3)
+                ]
+          ]
+
+  describe "core > let" $ do
+    it "creates a binding within the given scope" $ do
+      evalExpr
+        [i|
+          (let [
+            '(hello 2)
+            '(foobar 3)
+            '(dooger 9) ]
+            (+ foobar hello dooger))
+        |]
+        `shouldReturn` Right [ValNumber 14]
