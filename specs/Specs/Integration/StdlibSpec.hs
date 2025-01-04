@@ -81,3 +81,34 @@ test = do
           [ ValQuoted (ExprSymList [ExprValue (ValNumber 2), ExprValue (ValNumber 4), ExprValue (ValNumber 6)]),
             ValNil
           ]
+
+  describe "core > null?" $ do
+    context "when list is empty" $ do
+      it "returns true" $ do
+        evalExpr [i| (null? '()) |] `shouldReturn` Right [ValBool True]
+        evalExpr [i| (null? #nil) |] `shouldReturn` Right [ValBool True]
+
+    context "when list is not empty" $ do
+      it "returns true" $ do
+        evalExpr [i| (null? '(1)) |] `shouldReturn` Right [ValBool False]
+
+  describe "core > list" $ do
+    it "constructs a list" $ do
+      evalExpr
+        [i|
+          (list 1 2 3 4 5 6)
+          (list)
+        |]
+        `shouldReturn` Right
+          [ ValQuoted
+              ( ExprSymList
+                  [ ExprValue (ValNumber 1),
+                    ExprValue (ValNumber 2),
+                    ExprValue (ValNumber 3),
+                    ExprValue (ValNumber 4),
+                    ExprValue (ValNumber 5),
+                    ExprValue (ValNumber 6)
+                  ]
+              ),
+            ValQuoted $ ExprSymList []
+          ]

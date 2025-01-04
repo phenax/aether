@@ -24,6 +24,8 @@ checkIfEqual (ValNumber v1) (ValNumber v2) = v1 == v2
 checkIfEqual (ValString v1) (ValString v2) = v1 == v2
 checkIfEqual (ValBool v1) (ValBool v2) = v1 == v2
 checkIfEqual ValNil ValNil = True
+checkIfEqual (ValQuoted (ExprSymList [])) ValNil = True
+checkIfEqual ValNil (ValQuoted (ExprSymList [])) = True
 checkIfEqual _ _ = False
 
 argToLabel :: Expr -> String

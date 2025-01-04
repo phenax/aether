@@ -177,3 +177,29 @@ test = do
             (foo 200)
           |]
           `shouldReturn` Right [ValNil, ValNil, ValNumber 205]
+
+    context "var args" $ do
+      it "allows accepting a variable number of arguments" $ do
+        evalExpr
+          [i|
+            (define (foo a b c ... rest)
+              '(,a ,b ,c ,rest))
+            (foo 1 2 3 4 5 6 7)
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValQuoted $
+                ExprSymList
+                  [ ExprValue (ValNumber 1),
+                    ExprValue (ValNumber 2),
+                    ExprValue (ValNumber 3),
+                    ExprValue $
+                      ValQuoted $
+                        ExprSymList
+                          [ ExprValue (ValNumber 4),
+                            ExprValue (ValNumber 5),
+                            ExprValue (ValNumber 6),
+                            ExprValue (ValNumber 7)
+                          ]
+                  ]
+            ]

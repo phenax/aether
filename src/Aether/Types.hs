@@ -34,6 +34,7 @@ data EvalValue
 data EvalError
   = TypeError String
   | NameNotFound String
+  | ArgumentError String
   | UnknownError String
   deriving (Show, Eq)
 

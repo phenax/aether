@@ -22,6 +22,8 @@
   (eval '(,(eval cond) ,then ,else)))
 
 ; List operations
+(define (list ... ls) ls)
+
 (define (null? x) (eq? x #nil))
 (set empty? null?)
 

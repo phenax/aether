@@ -1,6 +1,7 @@
 module Aether.Runtime.Scope where
 
 import Aether.Types
+import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.RWS (gets, modify')
 import qualified Data.Map as Map
 
@@ -35,7 +36,15 @@ closure (Stack {stack}) eval = do
     mergeCommon (x1 : xs1) (x2 : xs2) | scopeId x1 == scopeId x2 = (x1 <> x2) : mergeCommon xs1 xs2
     mergeCommon xs _ = xs
 
+zipArgs :: [String] -> [EvalValue] -> Maybe [(String, EvalValue)]
+zipArgs [] [] = pure []
+zipArgs ["...", label] rest = pure [(label, ValQuoted . ExprSymList . fmap ExprValue $ rest)]
+zipArgs (label : labels) (arg : args) = ((label, arg) :) <$> zipArgs labels args
+zipArgs _ _ = Nothing
+
 argsToScope :: [String] -> [Expr] -> (Expr -> Evaluator m EvalValue) -> Evaluator m Scope
 argsToScope labels argsE expToVal = do
   args <- mapM expToVal argsE
-  mkScope $ Map.fromList $ labels `zip` args
+  case zipArgs labels args of
+    Just zargs -> mkScope $ Map.fromList zargs
+    Nothing -> throwError $ ArgumentError "Invalid number of arguments"
