@@ -59,7 +59,7 @@ test = do
         `shouldReturn` Right [ValNumber 21, ValNumber 18, ValNumber 2]
 
   describe "core > reverse" $ do
-    it "maps over list of items" $ do
+    it "reverses the list of items" $ do
       evalExpr
         [i|
           (reverse '[1 2 3])

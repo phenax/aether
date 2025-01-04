@@ -1,10 +1,10 @@
 module Aether.Runtime.Interpreter where
 
-import Aether.Runtime.Scope (argsToScope, defineInCurrentScope, insertNewScope, lookupSymbol, withSandboxedScope)
+import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupSymbol, mkScope)
 import Aether.Runtime.Value
 import Aether.Types
 import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
-import Control.Monad.State (MonadIO, StateT (runStateT), gets, modify')
+import Control.Monad.State (MonadIO, MonadState (get), StateT (runStateT), gets, modify')
 import qualified Data.Map as Map
 
 interpretLiteral :: Literal -> Evaluator m EvalValue
@@ -41,31 +41,39 @@ evaluateBuiltins "set" [ExprSymbol name, valueE] = do
 evaluateBuiltins "set" _ = do throwError $ TypeError "Invalid call to set"
 
 -- Lambda expression syntax
-evaluateBuiltins "->" (ExprSymList argsE : bodyE) =
-  pure . Just $ ValLambda argLabels body
+evaluateBuiltins "->" (ExprSymList argsE : bodyE) = do
+  stack <- gets envCallStack
+  pure . Just $ ValLambda stack argLabels body
   where
     argLabels = argToLabel <$> argsE
     body = ExprSymList (ExprSymbol "do" : bodyE)
 evaluateBuiltins "->" _ = do throwError $ TypeError "Invalid call to ->"
 
 -- Define lambda in current scope
-evaluateBuiltins "define" (ExprSymList (ExprSymbol name : argsE) : body) =
-  Just ValNil <$ modify' (defineInCurrentScope name lambda)
+evaluateBuiltins "define" (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
+  stack <- gets envCallStack
+  modify' $ defineInCurrentScope name (ValLambda stack argLabels body)
+  pure $ Just ValNil
   where
-    lambda = ValLambda (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
+    argLabels = argToLabel <$> argsE
+    body = ExprSymList (ExprSymbol "do" : bodyE)
 evaluateBuiltins "define" _ = do throwError $ TypeError "Invalid call to define"
 
 -- Define macro in current scope
-evaluateBuiltins "defmacro" (ExprSymList (ExprSymbol name : argsE) : body) =
-  Just ValNil <$ modify' (defineInCurrentScope name macro)
+evaluateBuiltins "defmacro" (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
+  stack <- gets envCallStack
+  modify' (defineInCurrentScope name $ ValMacro stack argLabels body)
+  pure $ Just ValNil
   where
-    macro = ValMacro (argToLabel <$> argsE) $ ExprSymList (ExprSymbol "do" : body)
+    argLabels = argToLabel <$> argsE
+    body = ExprSymList (ExprSymbol "do" : bodyE)
 evaluateBuiltins "defmacro" _ = do throwError $ TypeError "Invalid call to defmacro"
 
 -- Do syntax (chained expressions)
 evaluateBuiltins "do" body = do
-  results <- withSandboxedScope $ do
-    modify' $ insertNewScope Map.empty
+  (Stack stack) <- gets envCallStack
+  scope <- mkScope Map.empty
+  results <- closure (Stack $ scope : stack) $ do
     mapM interpretExpression body
   pure $ Just $ case results of
     [] -> ValNil
@@ -150,19 +158,22 @@ operateOnExprs :: ([EvalValue] -> EvalValue) -> [Expr] -> Evaluator m EvalValue
 operateOnExprs fn exprs = fn <$> mapM interpretExpression exprs
 
 evaluateCall :: EvalValue -> [Expr] -> Evaluator m EvalValue
-evaluateCall (ValLambda labels body) argsE = do
+-- Lambda
+evaluateCall (ValLambda (Stack stack) labels body) argsE = do
   argsScope <- argsToScope labels argsE interpretExpression
-  withSandboxedScope $ do
-    modify' $ insertNewScope argsScope
-    interpretExpression body
-evaluateCall (ValMacro labels body) argsE = do
+  closure (Stack $ argsScope : stack) $ interpretExpression body
+
+-- Macros
+-- TODO: Figure out how to scope macros
+evaluateCall (ValMacro (Stack _stack) labels body) argsE = do
+  (Stack scope1) <- gets envCallStack
   argsScope <- argsToScope labels argsE (pure . ValQuoted)
-  result <- withSandboxedScope $ do
-    modify' $ insertNewScope argsScope
-    interpretExpression body
+  result <- closure (Stack $ argsScope : scope1) $ interpretExpression body
   case result of
     ValQuoted expr -> interpretExpression expr
     _ -> pure result
+
+-- Booleans are callable (Kite/Kestral)
 evaluateCall (ValBool bool) argsE = do
   case argsE of
     (then_ : _) | bool -> interpretExpression then_

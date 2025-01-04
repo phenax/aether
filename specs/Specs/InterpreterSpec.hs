@@ -1,13 +1,8 @@
 module Specs.InterpreterSpec where
 
 import Aether.Runtime (runExprInterpreter, runInterpreter)
-import Aether.Runtime.Interpreter (interpretExpression, runExprEvaluatorWithCallStack)
-import Aether.Syntax.Parser
 import Aether.Types
-import Data.Either (isLeft)
-import Data.String.Interpolate.IsString
 import Test.Hspec
-import TestUtils
 
 test :: SpecWith ()
 test = do
@@ -74,7 +69,7 @@ test = do
                   ExprSymbol "foobar"
                 ]
           evalExprs exprs
-            `shouldReturn` Right [ValNil, ValLambda ["a"] $ ExprSymList [ExprSymbol "do", ExprSymbol "a"]]
+            `shouldReturn` Right [ValNil, ValLambda (Stack []) ["a"] $ ExprSymList [ExprSymbol "do", ExprSymbol "a"]]
 
     context "when calling a boolean" $ do
       context "when value is true (#T)" $ do

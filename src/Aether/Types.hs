@@ -23,8 +23,8 @@ data Expr
 
 data EvalValue
   = ValBool Bool
-  | ValLambda [String] Expr
-  | ValMacro [String] Expr
+  | ValLambda Stack [String] Expr
+  | ValMacro Stack [String] Expr
   | ValNil
   | ValNumber Double
   | ValQuoted Expr
@@ -37,17 +37,32 @@ data EvalError
   | UnknownError String
   deriving (Show, Eq)
 
-type Scope = Map.Map String EvalValue
-
-newtype EvalEnvironment = EvalEnvironment {envCallStack :: [Scope]}
+data Scope = Scope {scopeId :: ScopeId, scopeTable :: Map.Map String EvalValue}
   deriving (Show, Eq)
 
+instance Semigroup Scope where
+  (<>) s1 s2 = Scope {scopeId = scopeId s1, scopeTable = Map.union (scopeTable s1) (scopeTable s2)}
+
+newtype Stack = Stack {stack :: [Scope]}
+  deriving (Show)
+
+-- NOTE: To not affect lambdas in test. DO NOT CHECK FOR EQUALITY
+instance Eq Stack where
+  (==) _ _ = True
+
+newtype ScopeId = ScopeId Int
+  deriving (Show, Eq)
+
+data EvalEnvironment = EvalEnvironment
+  {envCallStack :: Stack, envScopeId :: Int}
+  deriving (Show)
+
 instance Semigroup EvalEnvironment where
-  (<>) a b = EvalEnvironment {envCallStack = envCallStack a <> envCallStack b}
+  (<>) _ _ = undefined -- TODO: Think
 
 instance Monoid EvalEnvironment where
-  mempty = EvalEnvironment {envCallStack = [Map.empty]}
+  mempty = EvalEnvironment {envScopeId = 1, envCallStack = Stack [Scope {scopeId = ScopeId 0, scopeTable = Map.empty}]}
 
 type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m) => m a
 
-$(deriveLiftMany [''Literal, ''Expr, ''EvalValue, ''EvalError, ''EvalEnvironment])
+$(deriveLiftMany [''Literal, ''Expr, ''EvalValue, ''EvalError, ''ScopeId, ''Scope, ''Stack])

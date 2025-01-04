@@ -1,7 +1,7 @@
 module Aether.Runtime where
 
 import Aether.Runtime.Interpreter (runExprInterpreterRaw, runInterpreterRaw)
-import Aether.Syntax.Parser (ParserResult, parseAll)
+import Aether.Syntax.Parser (parseAll)
 import Aether.Types
 import Control.Monad (foldM)
 import Control.Monad.IO.Class (MonadIO)
@@ -11,23 +11,28 @@ import Language.Haskell.TH.Syntax (Lift (lift), Q)
 import Text.Megaparsec (errorBundlePretty)
 
 runExprInterpreter :: (MonadIO m) => Expr -> m (Either EvalError EvalValue)
-runExprInterpreter = fmap fst . runExprInterpreterRaw standardLib
+runExprInterpreter expr = do
+  env <- envWithStdLib
+  fst <$> runExprInterpreterRaw env expr
 
 runInterpreter :: (MonadIO m) => [Expr] -> m (Either EvalError [EvalValue])
-runInterpreter = fmap fst . runInterpreterRaw standardLib
+runInterpreter exprs = do
+  env <- envWithStdLib
+  fst <$> runInterpreterRaw env exprs
 
--- Load, parse and interpret the standard library at compile time
-standardLib :: EvalEnvironment
+envWithStdLib :: (MonadIO m) => m EvalEnvironment
+envWithStdLib = snd <$> runInterpreterRaw mempty standardLib
+
+-- Load and parse the standard library at compile time
+standardLib :: [Expr]
 standardLib =
   $( do
-       let evaluateAst :: EvalEnvironment -> ParserResult [Expr] -> Q EvalEnvironment
-           evaluateAst environment (Right ast) = runIO $ snd <$> runInterpreterRaw environment ast
-           evaluateAst _ (Left e) = error $ errorBundlePretty e
-
-       let loadCodeInEnv :: EvalEnvironment -> String -> Q EvalEnvironment
-           loadCodeInEnv env file = do
+       let loadCodeInEnv :: [Expr] -> String -> Q [Expr]
+           loadCodeInEnv parsed file = do
              result <- runIO $ parseAll file . Text.pack <$> readFile file
-             evaluateAst env result
+             case result of
+               Right ast -> pure $ parsed ++ ast
+               Left e -> error $ errorBundlePretty e
 
        foldM loadCodeInEnv mempty ["./stdlib/core.rkt"] >>= lift
    )

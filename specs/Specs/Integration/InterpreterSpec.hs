@@ -36,7 +36,7 @@ test = do
           |]
           `shouldReturn` Right
             [ ValNil,
-              ValLambda ["a", "b"] $ ExprSymList [ExprSymbol "do", ExprSymList [ExprSymbol "+", ExprSymbol "a", ExprSymbol "b"]],
+              ValLambda (Stack []) ["a", "b"] $ ExprSymList [ExprSymbol "do", ExprSymList [ExprSymbol "+", ExprSymbol "a", ExprSymbol "b"]],
               ValNumber 42.0,
               ValNumber 42.0
             ]
@@ -167,3 +167,13 @@ test = do
                       ]
                   )
               ]
+
+    context "define scopes" $ do
+      it "lambda uses scope where it was defined" $ do
+        evalExpr
+          [i|
+            (define (bar foobar) (foobar 5))
+            (define (foo foobar) (bar (-> [x] (+ foobar x))))
+            (foo 200)
+          |]
+          `shouldReturn` Right [ValNil, ValNil, ValNumber 205]

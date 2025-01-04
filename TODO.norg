@@ -4,10 +4,10 @@
   - (x) Math operations
   - (x) Simple stdlib
   - (x) Quasiquotes
-  - ( ) Fix lambda scope to be scope of definition and not call site
-  - ( ) List operations
-  - ( ) Tests for defmacro
+  - (x) Fix lambda scope to be scope of definition and not call site
   - ( ) Var args
+  - (x) List operations
+  - ( ) Tests for defmacro
   - ( ) Stack trace
   - ( ) Cleanup your shitty spec
   - ( ) Shortcircuiting for &&, ||, eq?
