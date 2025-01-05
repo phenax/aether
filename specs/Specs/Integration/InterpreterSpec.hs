@@ -31,11 +31,13 @@ test = do
           [i|
             (define (binary-op op a b) (op a b))
             (set + (-> [a b] (+ a b)))
+            +
             (binary-op + 8 34)
             (+ 8 34)
           |]
           `shouldReturn` Right
             [ ValNil,
+              ValNil,
               ValLambda (Stack []) ["a", "b"] $ ExprSymList [ExprSymbol "do", ExprSymList [ExprSymbol "+", ExprSymbol "a", ExprSymbol "b"]],
               ValNumber 42.0,
               ValNumber 42.0
@@ -111,7 +113,7 @@ test = do
             '(hello ,(+ 20 3) world ,foobar)
           |]
           `shouldReturn` Right
-            [ ValNumber 20,
+            [ ValNil,
               ValQuoted
                 ( ExprSymList
                     [ ExprSymbol "hello",
@@ -203,3 +205,16 @@ test = do
                           ]
                   ]
             ]
+
+    context "factorial example" $ do
+      it "evaluates successfully" $ do
+        evalExpr
+          [i|
+            (define (factorial n)
+              (if (lte? n 1)
+                  1
+                  (* n (factorial (- n 1)))))
+
+            (factorial 10)
+          |]
+          `shouldReturn` Right [ValNil, ValNumber 3628800]

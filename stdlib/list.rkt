@@ -3,6 +3,13 @@
 (define (null? x) (eq? x #nil))
 (set empty? null?)
 
+(define (length list)
+  (define (length-inner ls acc)
+    (if (empty? ls)
+      acc
+      (length-inner (cdr ls) (+ acc 1))))
+  (length-inner list 0))
+
 (define (concat ls1 ls2)
   (if (empty? ls1)
     ls2

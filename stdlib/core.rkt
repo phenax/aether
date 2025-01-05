@@ -9,14 +9,14 @@
 (define (lte? a b) (lte? a b))
 (define (gte? a b) (gte? a b))
 (define (eq? a b) (eq? a b))
-(define (not a) (not a))
 (define (&& a b) (&& a b))
 (define (|| a b) (|| a b))
-
 (define (set k v) (set k v))
 
 ; Primitives
 (define (id x) x)
+(define (const x) (-> [_] x))
+(define (not a) (a #F #T))
 
 ; If conditionals
 ; Example:
@@ -34,3 +34,6 @@
   (concat
     (cons 'do (map (-> [bind] (cons 'set bind)) bindings))
     (if (eq? (type body) 'list) body '(,body))))
+
+;; (defmacro (apply fn args)
+;;   (cons fn args))

@@ -4,8 +4,8 @@ import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupS
 import Aether.Runtime.Value
 import Aether.Types
 import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
-import Control.Monad.State (MonadIO, MonadState (get), StateT (runStateT), gets, modify')
-import qualified Data.Map as Map
+import Control.Monad.State.Strict (MonadIO, StateT (runStateT), gets, modify')
+import qualified Data.Map.Strict as Map
 import qualified Debug.Trace as Debug
 
 interpretLiteral :: Literal -> Evaluator m EvalValue
@@ -21,8 +21,10 @@ interpretExpression = \case
   (ExprSymbol sym) -> gets (lookupSymbol sym) >>= maybe (throwError $ NameNotFound sym) pure
   (ExprSymList []) -> pure ValNil
   (ExprSymList (ExprSymbol name : argsE)) -> do
-    let evalSymbol = interpretExpression (ExprSymbol name) >>= (`evaluateCall` argsE)
-    evaluateBuiltins name argsE >>= maybe evalSymbol pure
+    !builtinResult <- evaluateBuiltins name argsE
+    case builtinResult of
+      Just result -> pure result
+      Nothing -> interpretExpression (ExprSymbol name) >>= (`evaluateCall` argsE)
   (ExprSymList (fnE : argsE)) -> interpretExpression fnE >>= (`evaluateCall` argsE)
   (ExprUnquoted expr) -> interpretExpression expr
   (ExprValue value) -> pure value
@@ -36,9 +38,9 @@ interpretExpression = \case
 evaluateBuiltins :: String -> [Expr] -> Evaluator m (Maybe EvalValue)
 -- Set a value in current scope
 evaluateBuiltins "set" [ExprSymbol name, valueE] = do
-  value <- interpretExpression valueE
+  !value <- interpretExpression valueE
   modify' $ defineInCurrentScope name value
-  pure $ Just value
+  pure $ Just ValNil
 evaluateBuiltins "set" args = do throwError $ TypeError $ "Invalid call to set :" ++ show args
 
 -- Lambda expression syntax
@@ -73,8 +75,8 @@ evaluateBuiltins "defmacro" _ = do throwError $ TypeError "Invalid call to defma
 -- Do syntax (chained expressions)
 evaluateBuiltins "do" body = do
   (Stack stack) <- gets envCallStack
-  scope <- mkScope Map.empty
-  results <- closure (Stack $ scope : stack) $ do
+  !scope <- mkScope Map.empty
+  !results <- closure (Stack $ scope : stack) $ do
     mapM interpretExpression body
   pure $ Just $ case results of
     [] -> ValNil
@@ -110,7 +112,9 @@ evaluateBuiltins "cdr" _ = do throwError $ TypeError "Invalid number of argument
 -- Construct pair
 evaluateBuiltins "cons" [itemE, restE] = do
   item <- interpretExpression itemE
+  -- Debug.traceShowM restE
   rest <- interpretExpression restE
+  -- Debug.traceShowM rest
   case rest of
     ValQuoted (ExprSymList values) -> pure . Just $ ValQuoted (ExprSymList (ExprValue item : values))
     ValNil -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
@@ -142,8 +146,6 @@ evaluateBuiltins "gte?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . 
 evaluateBuiltins "gte?" _ = throwError $ TypeError "Invalid number of arguments for gte?"
 evaluateBuiltins "eq?" exprs = Just <$> operateOnExprs (ValBool . checkIfAllEqual) exprs
 -- Boolean operations
-evaluateBuiltins "not" [expr] = Just . ValBool . not . valToBool <$> interpretExpression expr
-evaluateBuiltins "not" _ = throwError $ TypeError "Invalid number of arguments for not"
 evaluateBuiltins "&&" exprs = Just <$> operateOnExprs (ValBool . all valToBool) exprs
 evaluateBuiltins "||" exprs = Just <$> operateOnExprs (ValBool . any valToBool) exprs
 -- Type helpers
@@ -151,16 +153,6 @@ evaluateBuiltins "type" [expr] = Just . ValQuoted . ExprSymbol . typeOfValue <$>
 evaluateBuiltins "lt?" _ = throwError $ TypeError "Invalid number of arguments for lt?"
 --
 evaluateBuiltins _ _ = pure Nothing
-
-typeOfValue :: EvalValue -> String
-typeOfValue (ValBool _) = "boolean"
-typeOfValue (ValNumber _) = "number"
-typeOfValue (ValString _) = "string"
-typeOfValue (ValLambda {}) = "function"
-typeOfValue (ValMacro {}) = "macro"
-typeOfValue (ValQuoted (ExprSymList _)) = "list"
-typeOfValue (ValQuoted {}) = "quote"
-typeOfValue ValNil = "list"
 
 numberBinaryOp :: (Double -> Double -> EvalValue) -> Expr -> Expr -> Evaluator m EvalValue
 numberBinaryOp fn exp1 exp2 = do

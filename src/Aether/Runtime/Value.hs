@@ -32,3 +32,13 @@ checkIfEqual _ _ = False
 argToLabel :: Expr -> String
 argToLabel (ExprSymbol sym) = sym
 argToLabel _ = "_"
+
+typeOfValue :: EvalValue -> String
+typeOfValue (ValBool _) = "boolean"
+typeOfValue (ValNumber _) = "number"
+typeOfValue (ValString _) = "string"
+typeOfValue (ValLambda {}) = "function"
+typeOfValue (ValMacro {}) = "macro"
+typeOfValue (ValQuoted (ExprSymList _)) = "list"
+typeOfValue (ValQuoted {}) = "quote"
+typeOfValue ValNil = "list"

@@ -1,44 +1,44 @@
 module Aether.Types where
 
 import Control.Monad.Except (MonadError)
-import Control.Monad.RWS (MonadState)
-import qualified Data.Map as Map
+import Control.Monad.RWS.Strict (MonadState)
+import qualified Data.Map.Strict as Map
 import Language.Haskell.TH.Lift (deriveLiftMany)
 
 data Literal
-  = LitString String
-  | LitNumber Double
-  | LitBool Bool
+  = LitBool !Bool
   | LitNil
+  | LitNumber !Double
+  | LitString !String
   deriving (Show, Eq)
 
 data Expr
-  = ExprLiteral Literal
-  | ExprQuoted Expr
-  | ExprSymList [Expr]
-  | ExprSymbol String
-  | ExprUnquoted Expr
-  | ExprValue EvalValue
+  = ExprLiteral !Literal
+  | ExprQuoted !Expr
+  | ExprSymList ![Expr]
+  | ExprSymbol !String
+  | ExprUnquoted !Expr
+  | ExprValue !EvalValue
   deriving (Show, Eq)
 
 data EvalValue
-  = ValBool Bool
-  | ValLambda Stack [String] Expr
-  | ValMacro Stack [String] Expr
+  = ValBool !Bool
+  | ValLambda !Stack ![String] !Expr
+  | ValMacro !Stack ![String] !Expr
   | ValNil
-  | ValNumber Double
-  | ValQuoted Expr
-  | ValString String
+  | ValNumber !Double
+  | ValQuoted !Expr
+  | ValString !String
   deriving (Show, Eq)
 
 data EvalError
-  = TypeError String
+  = ArgumentError String
+  | TypeError String
   | NameNotFound String
-  | ArgumentError String
   | UnknownError String
   deriving (Show, Eq)
 
-data Scope = Scope {scopeId :: ScopeId, scopeTable :: Map.Map String EvalValue}
+data Scope = Scope {scopeId :: !ScopeId, scopeTable :: !(Map.Map String EvalValue)}
   deriving (Show, Eq)
 
 instance Semigroup Scope where
@@ -54,8 +54,7 @@ instance Eq Stack where
 newtype ScopeId = ScopeId Int
   deriving (Show, Eq)
 
-data EvalEnvironment = EvalEnvironment
-  {envCallStack :: Stack, envScopeId :: Int}
+data EvalEnvironment = EvalEnvironment {envCallStack :: !Stack, envScopeId :: !Int}
   deriving (Show)
 
 instance Semigroup EvalEnvironment where

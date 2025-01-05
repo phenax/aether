@@ -156,3 +156,40 @@ test = do
             (+ foobar hello dooger))
         |]
         `shouldReturn` Right [ValNumber 14]
+
+  describe "core > length" $ do
+    it "returns length of list" $ do
+      evalExpr
+        [i|
+          (length (list 1 2 3 4 5))
+        |]
+        `shouldReturn` Right [ValNumber 5]
+
+    context "when list is empty" $ do
+      it "returns length of list" $ do
+        evalExpr
+          [i|
+            (length (list))
+            (length #nil)
+            (length '[])
+          |]
+          `shouldReturn` Right [ValNumber 0, ValNumber 0, ValNumber 0]
+
+  xdescribe "core > apply" $ do
+    it "applies args to a function" $ do
+      evalExpr
+        [i|
+          (defmacro (apply fn args) (cons fn ,args))
+
+          (define (foobar a b c) (+ a (* b c)))
+          (apply foobar '[1 2 3])
+        |]
+        `shouldReturn` Right [ValNil, ValNumber 5]
+
+  describe "core > id" $ do
+    it "returns given value" $ do
+      evalExpr [i| (id 5) |] `shouldReturn` Right [ValNumber 5]
+
+  describe "core > const" $ do
+    it "returns first arg" $ do
+      evalExpr [i| ((const 20) 99) |] `shouldReturn` Right [ValNumber 20]

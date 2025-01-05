@@ -1,10 +1,9 @@
 module TestUtils where
 
-import Aether.Syntax.Parser (Parsable, ParseError, Parser, parse)
-import Data.Either (isLeft)
+import Aether.Syntax.Parser (Parsable, ParseError, parse)
 import Data.Text (Text)
 import Test.Hspec
-import Text.Megaparsec (MonadParsec (eof), ParseErrorBundle (ParseErrorBundle), errorBundlePretty, runParser)
+import Text.Megaparsec (MonadParsec (eof), errorBundlePretty, runParser)
 
 shouldParse :: (HasCallStack, Parsable v, Show v, Eq v) => Text -> v -> Expectation
 shouldParse input val = case parseParsable input of

@@ -30,7 +30,7 @@ test = do
                 [ ExprSymList [ExprSymbol "set", ExprSymbol "foobar", ExprLiteral $ LitNumber 923],
                   ExprSymbol "foobar"
                 ]
-          evalExprs exprs `shouldReturn` Right [ValNumber 923, ValNumber 923]
+          evalExprs exprs `shouldReturn` Right [ValNil, ValNumber 923]
 
       context "when symbol does not exist" $ do
         it "fails with error" $ do
