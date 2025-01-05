@@ -27,13 +27,20 @@ interpretExpression = \case
       Nothing -> interpretExpression (ExprSymbol name) >>= (`evaluateCall` argsE)
   (ExprSymList (fnE : argsE)) -> interpretExpression fnE >>= (`evaluateCall` argsE)
   (ExprUnquoted expr) -> interpretExpression expr
+  (ExprSpliced expr) -> interpretExpression expr
   (ExprValue value) -> pure value
   (ExprQuoted (ExprSymList [])) -> pure ValNil
   (ExprQuoted quote) -> ValQuoted <$> evalUnquotes quote
     where
       evalUnquotes (ExprUnquoted expr) = ExprValue <$> interpretExpression expr
-      evalUnquotes (ExprSymList exprs) = ExprSymList <$> mapM evalUnquotes exprs
+      evalUnquotes (ExprSymList exprs) = ExprSymList <$> (mapM evalUnquotes exprs >>= evalSplices)
       evalUnquotes expr = pure expr
+      evalSplices [] = pure []
+      evalSplices (ExprSpliced expr : exprs) = concatSymlist <$> interpretExpression expr <*> evalSplices exprs
+        where
+          concatSymlist (ValQuoted (ExprSymList exprs')) rest = Debug.traceShowId $ exprs' ++ rest
+          concatSymlist e rest = Debug.traceShowId $ ExprValue e : rest
+      evalSplices (expr : exprs) = (expr :) <$> evalSplices exprs
 
 evaluateBuiltins :: String -> [Expr] -> Evaluator m (Maybe EvalValue)
 -- Set a value in current scope

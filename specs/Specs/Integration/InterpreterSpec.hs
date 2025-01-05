@@ -124,6 +124,34 @@ test = do
                 )
             ]
 
+      context "when quote contains spliced unquote" $ do
+        it "evaluates spliced unquote" $ do
+          evalExpr
+            [i|
+              (set foobar '(1 2 3))
+              (set value 200)
+              '(hello ,@foobar world ,foobar)
+              '(hello ,@value world ,value)
+            |]
+            `shouldReturn` Right
+              [ ValNil,
+                ValNil,
+                ValQuoted
+                  ( ExprSymList
+                      [ ExprSymbol "hello",
+                        ExprLiteral (LitNumber 1),
+                        ExprLiteral (LitNumber 2),
+                        ExprLiteral (LitNumber 3),
+                        ExprSymbol "world",
+                        ExprValue $
+                          ValQuoted
+                            (ExprSymList [ExprLiteral (LitNumber 1), ExprLiteral (LitNumber 2), ExprLiteral (LitNumber 3)])
+                      ]
+                  ),
+                ValQuoted
+                  (ExprSymList [ExprSymbol "hello", ExprValue (ValNumber 200), ExprSymbol "world", ExprValue (ValNumber 200)])
+              ]
+
     context "list operations" $ do
       context "with car" $ do
         it "evaluates" $ do

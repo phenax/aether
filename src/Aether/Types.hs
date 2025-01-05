@@ -18,6 +18,7 @@ data Expr
   | ExprSymList ![Expr]
   | ExprSymbol !String
   | ExprUnquoted !Expr
+  | ExprSpliced !Expr
   | ExprValue !EvalValue
   deriving (Show, Eq)
 

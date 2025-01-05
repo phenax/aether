@@ -47,8 +47,12 @@ instance Parsable Literal where
           P.between (P.char '"') (P.char '"') $ P.many (P.satisfy (/= '"'))
 
 instance Parsable Expr where
-  parse = spaceConsumer >> (quotedP <|> unQuotedP <|> literalP <|> symExprP <|> symbolP) <* spaceConsumer
+  parse =
+    wrappedSpaces
+      (quotedP <|> splicedP <|> unQuotedP <|> literalP <|> symExprP <|> symbolP)
     where
+      wrappedSpaces p = spaceConsumer >> p <* spaceConsumer
+
       literalP = ExprLiteral <$> parse
 
       symExprP = ExprSymList <$> (parens contents <|> brackets contents <|> angles contents <|> braces contents)
@@ -60,13 +64,13 @@ instance Parsable Expr where
           braces = P.between (P.char '{') (P.char '}')
 
       quotedP = ExprQuoted <$> (P.char '\'' >> parse)
-
       unQuotedP = ExprUnquoted <$> (P.char ',' >> parse)
+      splicedP = ExprSpliced <$> (P.string ",@" >> parse)
 
       symbolP = ExprSymbol <$> ((:) <$> identStartChar <*> P.many identChar)
         where
           validIdentSpecialChars = ":-_+=|?!@$%^&*/\\~.'#<>"
-          invalidStartChars = "'#<>"
+          invalidStartChars = "'#<>@"
           identStartChar = P.satisfy $ \c -> isAlpha c || c `elem` (validIdentSpecialChars \\ invalidStartChars)
           identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` (validIdentSpecialChars :: String)
 
