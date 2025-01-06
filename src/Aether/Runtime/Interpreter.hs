@@ -6,41 +6,50 @@ import Aether.Types
 import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
 import Control.Monad.State.Strict (MonadIO, StateT (runStateT), gets, modify')
 import qualified Data.Map.Strict as Map
-import qualified Debug.Trace as Debug
 
 interpretLiteral :: Literal -> Evaluator m EvalValue
 interpretLiteral = \case
-  (LitString str) -> pure $ ValString str
-  (LitBool bool) -> pure $ ValBool bool
-  (LitNumber num) -> pure $ ValNumber num
+  LitString str -> pure $ ValString str
+  LitBool bool -> pure $ ValBool bool
+  LitNumber num -> pure $ ValNumber num
   LitNil -> pure ValNil
 
 interpretExpression :: Expr -> Evaluator m EvalValue
 interpretExpression = \case
-  (ExprLiteral lit) -> interpretLiteral lit
-  (ExprSymbol sym) -> gets (lookupSymbol sym) >>= maybe (throwError $ NameNotFound sym) pure
-  (ExprSymList []) -> pure ValNil
-  (ExprSymList (ExprSymbol name : argsE)) -> do
+  ExprLiteral lit -> interpretLiteral lit
+  ExprSymbol sym -> gets (lookupSymbol sym) >>= maybe (throwError $ NameNotFound sym) pure
+  ExprSymList [] -> pure ValNil
+  ExprSymList (ExprSymbol name : argsE) -> do
     !builtinResult <- evaluateBuiltins name argsE
     case builtinResult of
       Just result -> pure result
       Nothing -> interpretExpression (ExprSymbol name) >>= (`evaluateCall` argsE)
-  (ExprSymList (fnE : argsE)) -> interpretExpression fnE >>= (`evaluateCall` argsE)
-  (ExprUnquoted expr) -> interpretExpression expr
-  (ExprSpliced expr) -> interpretExpression expr
-  (ExprValue value) -> pure value
-  (ExprQuoted (ExprSymList [])) -> pure ValNil
-  (ExprQuoted quote) -> ValQuoted <$> evalUnquotes quote
+  ExprSymList (fnE : argsE) -> interpretExpression fnE >>= (`evaluateCall` argsE)
+  ExprUnquoted _expr -> undefined -- TODO: either throw error or `interpretExpression expr`
+  ExprSpliced _expr -> undefined -- same interpretExpression expr
+  -- ExprValue (ValQuoted expr) -> interpretExpression expr
+  ExprValue value -> pure value
+  ExprQuoted (ExprSymList []) -> pure ValNil
+  ExprQuoted quote -> ValQuoted <$> evalUnquotes quote
     where
+      evalUnquotes :: Expr -> Evaluator m Expr
       evalUnquotes (ExprUnquoted expr) = ExprValue <$> interpretExpression expr
       evalUnquotes (ExprSymList exprs) = ExprSymList <$> (mapM evalUnquotes exprs >>= evalSplices)
       evalUnquotes expr = pure expr
+
+      evalSplices :: [Expr] -> Evaluator m [Expr]
       evalSplices [] = pure []
-      evalSplices (ExprSpliced expr : exprs) = concatSymlist <$> interpretExpression expr <*> evalSplices exprs
-        where
-          concatSymlist (ValQuoted (ExprSymList exprs')) rest = Debug.traceShowId $ exprs' ++ rest
-          concatSymlist e rest = Debug.traceShowId $ ExprValue e : rest
+      evalSplices (ExprSpliced expr : exprs) = do
+        val <- interpretExpression expr
+        spliced <- evalSplices exprs
+        (++ spliced) <$> expandSymList val
       evalSplices (expr : exprs) = (expr :) <$> evalSplices exprs
+
+      expandSymList :: EvalValue -> Evaluator m [Expr]
+      expandSymList (ValQuoted (ExprSymList exprs)) = pure exprs
+      expandSymList (ValQuoted (ExprQuoted (ExprSymList exprs))) = pure exprs
+      expandSymList (ValQuoted sym@(ExprSymbol _)) = interpretExpression sym >>= expandSymList
+      expandSymList e = pure [ExprValue e]
 
 evaluateBuiltins :: String -> [Expr] -> Evaluator m (Maybe EvalValue)
 -- Set a value in current scope
@@ -48,7 +57,7 @@ evaluateBuiltins "set" [ExprSymbol name, valueE] = do
   !value <- interpretExpression valueE
   modify' $ defineInCurrentScope name value
   pure $ Just ValNil
-evaluateBuiltins "set" args = do throwError $ TypeError $ "Invalid call to set :" ++ show args
+evaluateBuiltins "set" args = do throwError $ TypeError $ "Invalid call to set: " ++ show args
 
 -- Lambda expression syntax
 evaluateBuiltins "->" (ExprSymList argsE : bodyE) = do
@@ -56,7 +65,7 @@ evaluateBuiltins "->" (ExprSymList argsE : bodyE) = do
   pure . Just $ ValLambda stack argLabels body
   where
     argLabels = argToLabel <$> argsE
-    body = ExprSymList (ExprSymbol "do" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
 evaluateBuiltins "->" _ = do throwError $ TypeError "Invalid call to ->"
 
 -- Define lambda in current scope
@@ -66,7 +75,7 @@ evaluateBuiltins "define" (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
   pure $ Just ValNil
   where
     argLabels = argToLabel <$> argsE
-    body = ExprSymList (ExprSymbol "do" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
 evaluateBuiltins "define" _ = do throwError $ TypeError "Invalid call to define"
 
 -- Define macro in current scope
@@ -76,7 +85,7 @@ evaluateBuiltins "defmacro" (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
   pure $ Just ValNil
   where
     argLabels = argToLabel <$> argsE
-    body = ExprSymList (ExprSymbol "do" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
 evaluateBuiltins "defmacro" _ = do throwError $ TypeError "Invalid call to defmacro"
 
 -- Do syntax (chained expressions)
@@ -119,9 +128,7 @@ evaluateBuiltins "cdr" _ = do throwError $ TypeError "Invalid number of argument
 -- Construct pair
 evaluateBuiltins "cons" [itemE, restE] = do
   item <- interpretExpression itemE
-  -- Debug.traceShowM restE
   rest <- interpretExpression restE
-  -- Debug.traceShowM rest
   case rest of
     ValQuoted (ExprSymList values) -> pure . Just $ ValQuoted (ExprSymList (ExprValue item : values))
     ValNil -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
@@ -173,25 +180,38 @@ operateOnExprs fn exprs = fn <$> mapM interpretExpression exprs
 evaluateCall :: EvalValue -> [Expr] -> Evaluator m EvalValue
 -- Lambda
 evaluateCall (ValLambda (Stack stack) labels body) argsE = do
-  argsScope <- argsToScope labels argsE interpretExpression
+  args <- mapM interpretExpression argsE
+  argsScope <- argsToScope labels args
   closure (Stack $ argsScope : stack) $ interpretExpression body
 
 -- Macros
--- TODO: Figure out how to scope macros
-evaluateCall (ValMacro (Stack _stack) labels body) argsE = do
-  (Stack scope1) <- gets envCallStack
-  argsScope <- argsToScope labels argsE (pure . ValQuoted)
-  result <- closure (Stack $ argsScope : scope1) $ interpretExpression body
-  -- Debug.traceShowM result
+-- TODO: Figure out how to lexically scope macros
+evaluateCall (ValMacro (Stack _defnstack) labels body) argsE = do
+  (Stack callerstack) <- gets envCallStack
+  !args <- mapM interpretMacroArgs argsE
+  !argsScope <- argsToScope labels args
+  !result <- closure (Stack $ argsScope : callerstack) $ interpretExpression body
   case result of
     ValQuoted expr -> interpretExpression $ unwrapQuotes expr
     _ -> pure result
   where
+    interpretMacroArgs :: Expr -> Evaluator m EvalValue
+    interpretMacroArgs (ExprLiteral lit) = interpretLiteral lit
+    interpretMacroArgs (ExprValue v) = pure v
+    interpretMacroArgs (ExprQuoted quote) = pure $ ValQuoted quote
+    interpretMacroArgs (ExprSymList exprs) = ValQuoted . ExprSymList . fmap ExprValue <$> mapM interpretMacroArgs exprs
+    interpretMacroArgs val = pure $ ValQuoted val
+
     unwrapQuotes :: Expr -> Expr
     unwrapQuotes (ExprSymList exprs) = ExprSymList $ map unwrapQuotes exprs
     unwrapQuotes (ExprValue (ValQuoted (ExprSymList exprs))) = ExprSymList $ map unwrapQuotes exprs
     unwrapQuotes (ExprValue (ValQuoted e)) = e
     unwrapQuotes e = e
+
+-- Quoted values
+evaluateCall (ValQuoted quote) argsE = do
+  !fn <- interpretExpression quote
+  evaluateCall fn argsE
 
 -- Booleans are callable (Kite/Kestral)
 evaluateCall (ValBool bool) argsE = do
@@ -199,7 +219,9 @@ evaluateCall (ValBool bool) argsE = do
     (then_ : _) | bool -> interpretExpression then_
     (_ : else_ : _) | not bool -> interpretExpression else_
     _ -> pure ValNil
-evaluateCall value _args = throwError $ TypeError $ "Can't call value " ++ show value
+
+-- Invald call
+evaluateCall value _args = do throwError $ TypeError $ "Can't call value: " ++ show value -- ++ " with: " ++ show args
 
 interpretAll :: [Expr] -> Evaluator m [EvalValue]
 interpretAll = mapM interpretExpression

@@ -28,11 +28,11 @@
 
 ; Let bindings
 ; Example:
-;   (let [ '(value1 200) '(value2 50) ]
+;   (let [ (value1 200) (value2 50) ]
 ;        (+ value1 value2))
 (defmacro (let bindings ... body)
-  (concat
-    (cons 'do (map (-> [bind] (cons 'set bind)) bindings))
-    (if (eq? (type body) 'list) body '(,body))))
+  '(do
+    ,@(map (-> [bind] '(set ,@bind)) bindings)
+    ,@body))
 
 (define (apply fn args) (eval '(,fn ,@args)))

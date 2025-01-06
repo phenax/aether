@@ -69,7 +69,7 @@ test = do
                   ExprSymbol "foobar"
                 ]
           evalExprs exprs
-            `shouldReturn` Right [ValNil, ValLambda (Stack []) ["a"] $ ExprSymList [ExprSymbol "do", ExprSymbol "a"]]
+            `shouldReturn` Right [ValNil, ValLambda (Stack []) ["a"] $ ExprSymbol "a"]
 
     context "when calling a boolean" $ do
       context "when value is true (#T)" $ do

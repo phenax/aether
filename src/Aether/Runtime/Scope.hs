@@ -4,7 +4,6 @@ import Aether.Types
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.RWS (gets, modify')
 import qualified Data.Map.Strict as Map
-import qualified Debug.Trace as Debug
 
 defineInCurrentScope :: String -> EvalValue -> EvalEnvironment -> EvalEnvironment
 defineInCurrentScope name value env@(EvalEnvironment {envCallStack = Stack (scope : rest)}) =
@@ -43,11 +42,8 @@ zipArgs ["...", label] rest = pure [(label, ValQuoted . ExprSymList . fmap ExprV
 zipArgs (label : labels) (arg : args) = ((label, arg) :) <$> zipArgs labels args
 zipArgs _ _ = Nothing
 
-argsToScope :: [String] -> [Expr] -> (Expr -> Evaluator m EvalValue) -> Evaluator m Scope
-argsToScope labels argsE expToVal = do
-  args <- mapM expToVal argsE
-  -- Debug.traceShowM labels
-  -- Debug.traceShowM args
+argsToScope :: [String] -> [EvalValue] -> Evaluator m Scope
+argsToScope labels args = do
   case zipArgs labels args of
     Just zargs -> mkScope $ Map.fromList zargs
     Nothing -> throwError $ ArgumentError "Invalid number of arguments"

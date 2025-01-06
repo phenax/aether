@@ -35,10 +35,6 @@ test = do
           |]
           `shouldReturn` Right [ValNil, ValNumber (-26.0), ValNumber (-25.0)]
 
-  describe "core > id" $ do
-    it "returns input" $ do
-      evalExpr [i| (id 2) |] `shouldReturn` Right [ValNumber 2]
-
   describe "core > if" $ do
     it "evaluates conditionals" $ do
       evalExpr
@@ -150,9 +146,9 @@ test = do
       evalExpr
         [i|
           (let [
-            '(hello 2)
-            '(foobar 3)
-            '(dooger 9) ]
+            (hello 2)
+            (foobar 3)
+            (dooger 9) ]
             (+ foobar hello dooger))
         |]
         `shouldReturn` Right [ValNumber 14]

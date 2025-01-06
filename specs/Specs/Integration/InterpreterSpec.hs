@@ -3,6 +3,7 @@ module Specs.Integration.InterpreterSpec where
 import Aether.Runtime (runInterpreter)
 import Aether.Syntax.Parser
 import Aether.Types
+import qualified Data.Map.Strict as Map
 import Data.String.Interpolate.IsString
 import Test.Hspec
 import Text.Megaparsec (errorBundlePretty)
@@ -38,7 +39,7 @@ test = do
           `shouldReturn` Right
             [ ValNil,
               ValNil,
-              ValLambda (Stack []) ["a", "b"] $ ExprSymList [ExprSymbol "do", ExprSymList [ExprSymbol "+", ExprSymbol "a", ExprSymbol "b"]],
+              ValLambda (Stack []) ["a", "b"] $ ExprSymList [ExprSymbol "+", ExprSymbol "a", ExprSymbol "b"],
               ValNumber 42.0,
               ValNumber 42.0
             ]
@@ -105,7 +106,51 @@ test = do
               ValBool True
             ]
 
-    context "quasiquotes" $ do
+    describe "defmacro" $ do
+      it "evaluates quoted list returned from macros" $ do
+        evalExpr
+          [i|
+            (defmacro (foobar x) '(+ ,(car x) 5))
+            (foobar '(1 2 3))
+          |]
+          `shouldReturn` Right [ValNil, ValNumber 6]
+
+      context "when uses a spliced result" $ do
+        it "evaluates macros" $ do
+          evalExpr
+            [i|
+              (defmacro (foobar ls) '(list ,@(cons 0 ls)))
+              (foobar (1 2 3))
+            |]
+            `shouldReturn` Right
+              [ ValNil,
+                ValQuoted $
+                  ExprSymList
+                    [ ExprValue $ ValNumber 0,
+                      ExprValue $ ValNumber 1,
+                      ExprValue $ ValNumber 2,
+                      ExprValue $ ValNumber 3
+                    ]
+              ]
+
+      context "when uses a spliced result" $ do
+        it "evaluates macros" $ do
+          evalExpr
+            [i|
+              (defmacro (foobar ls) '(list ,@(map (-> [x] '(list ,@x)) ls)))
+              (foobar ((1) (2) (3)))
+            |]
+            `shouldReturn` Right
+              [ ValNil,
+                ValQuoted $
+                  ExprSymList
+                    [ ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 1],
+                      ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 2],
+                      ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 3]
+                    ]
+              ]
+
+    describe "quasiquotes : unquote and splice" $ do
       it "evaluates unquotes" $ do
         evalExpr
           [i|
@@ -150,6 +195,32 @@ test = do
                   ),
                 ValQuoted
                   (ExprSymList [ExprSymbol "hello", ExprValue (ValNumber 200), ExprSymbol "world", ExprValue (ValNumber 200)])
+              ]
+
+      context "with nested unquotes" $ do
+        it "nested unquotes" $ do
+          evalExpr
+            [i|
+              (set foobar 20)
+              (set list '(1 2 3))
+              '(hello (+ ,foobar ,@list) world)
+            |]
+            `shouldReturn` Right
+              [ ValNil,
+                ValNil,
+                ValQuoted
+                  ( ExprSymList
+                      [ ExprSymbol "hello",
+                        ExprSymList
+                          [ ExprSymbol "+",
+                            ExprValue (ValNumber 20),
+                            ExprLiteral (LitNumber 1),
+                            ExprLiteral (LitNumber 2),
+                            ExprLiteral (LitNumber 3)
+                          ],
+                        ExprSymbol "world"
+                      ]
+                  )
               ]
 
     context "list operations" $ do
