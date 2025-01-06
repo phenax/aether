@@ -175,16 +175,15 @@ test = do
           |]
           `shouldReturn` Right [ValNumber 0, ValNumber 0, ValNumber 0]
 
-  xdescribe "core > apply" $ do
+  describe "core > apply" $ do
     it "applies args to a function" $ do
       evalExpr
         [i|
-          (defmacro (apply fn args) (cons fn ,args))
-
           (define (foobar a b c) (+ a (* b c)))
-          (apply foobar '[1 2 3])
+          (set arguments '[1 2 3])
+          (apply foobar arguments)
         |]
-        `shouldReturn` Right [ValNil, ValNumber 5]
+        `shouldReturn` Right [ValNil, ValNil, ValNumber 7]
 
   describe "core > id" $ do
     it "returns given value" $ do

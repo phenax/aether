@@ -1,6 +1,6 @@
 (define (list ... ls) ls)
 
-(define (null? x) (eq? x #nil))
+(define (null? null_item) (eq? null_item #nil))
 (set empty? null?)
 
 (define (length list)

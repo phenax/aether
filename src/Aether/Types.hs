@@ -46,7 +46,9 @@ instance Semigroup Scope where
   (<>) s1 s2 = Scope {scopeId = scopeId s1, scopeTable = Map.union (scopeTable s1) (scopeTable s2)}
 
 newtype Stack = Stack {stack :: [Scope]}
-  deriving (Show)
+
+instance Show Stack where
+  show (Stack st) = "<stack depth:" ++ show (length st) ++ ">"
 
 -- NOTE: To not affect lambdas in test. DO NOT CHECK FOR EQUALITY
 instance Eq Stack where

@@ -1,5 +1,5 @@
 ; Symbol overrides for builtin operators
-; TODO: Implement varargs whereever relevant
+; TODO: Remove after reworking primitives as symbols
 (define (+ a b) (+ a b))
 (define (- a b) (- a b))
 (define (* a b) (* a b))
@@ -24,7 +24,7 @@
 ;     "multi-digit"
 ;     "single-digit")
 (defmacro (if cond then else)
-  '(,(eval cond) ,then ,else))
+  '(,cond ,then ,else))
 
 ; Let bindings
 ; Example:
@@ -35,5 +35,4 @@
     (cons 'do (map (-> [bind] (cons 'set bind)) bindings))
     (if (eq? (type body) 'list) body '(,body))))
 
-;; (defmacro (apply fn args)
-;;   (cons fn args))
+(define (apply fn args) (eval '(,fn ,@args)))
