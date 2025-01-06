@@ -11,28 +11,54 @@
 (define (eq? a b) (eq? a b))
 (define (&& a b) (&& a b))
 (define (|| a b) (|| a b))
+(define (car ls) (car ls))
+(define (cdr ls) (cdr ls))
 (define (set k v) (set k v))
 
 ; Primitives
 (define (id x) x)
 (define (const x) (-> [_] x))
 (define (not a) (a #F #T))
+(define (apply fn args) (eval '(,fn ,@args)))
 
-; If conditionals
-; Example:
-;   (if (gt? num 10)
-;     "multi-digit"
-;     "single-digit")
+; Numbers
+(define (positive? num) (gt? num 0))
+(define (negative? num) (lt? num 0))
+(define (zero? num) (eq? num 0))
+
+;; If conditionals
+;; Example:
+;;   (if (gt? num 10)
+;;     "multi-digit"
+;;     "single-digit")
 (defmacro (if cond then else)
   '(,cond ,then ,else))
 
-; Let bindings
-; Example:
-;   (let [ (value1 200) (value2 50) ]
-;        (+ value1 value2))
+;; Let bindings
+;; Example:
+;;   (let [ (value1 200) (value2 50) ]
+;;        (+ value1 value2))
 (defmacro (let bindings ... body)
   '(do
     ,@(map (-> [bind] '(set ,@bind)) bindings)
     ,@body))
 
-(define (apply fn args) (eval '(,fn ,@args)))
+(set else #T)
+
+;; Cond conditional
+;; Example:
+;;   (cond
+;;     [(lt? age 3)   "baby"]
+;;     [(lt? age 13)  "child"]
+;;     [(lt? age 18)  "adolescent"]
+;;     [(lt? age 60)  "adult"]
+;;     [else          "almost dead"])
+(defmacro (cond ... cases)
+  (define (create-case cases)
+    (if (empty? cases)
+      #nil
+      (list if (car (car cases))
+        (cadr (car cases))
+        (create-case (cdr cases)))))
+
+  (create-case cases))

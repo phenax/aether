@@ -2,6 +2,7 @@ module Aether.Types where
 
 import Control.Monad.Except (MonadError)
 import Control.Monad.RWS.Strict (MonadState)
+import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Language.Haskell.TH.Lift (deriveLiftMany)
 
@@ -48,7 +49,7 @@ instance Semigroup Scope where
 newtype Stack = Stack {stack :: [Scope]}
 
 instance Show Stack where
-  show (Stack st) = "<stack depth:" ++ show (length st) ++ ">"
+  show (Stack st) = "<stack: " ++ intercalate "|" (map ((\(ScopeId i) -> show i) . scopeId) st) ++ ">"
 
 -- NOTE: To not affect lambdas in test. DO NOT CHECK FOR EQUALITY
 instance Eq Stack where

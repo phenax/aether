@@ -153,6 +153,20 @@ test = do
         |]
         `shouldReturn` Right [ValNumber 14]
 
+  describe "core > cond" $ do
+    it "creates a binding within the given scope" $ do
+      evalExpr
+        [i|
+          (set num 50)
+          (cond
+            [(lt? num 3)   "baby"]
+            [(lt? num 13)  "child"]
+            [(lt? num 18)  "adolescent"]
+            [(lt? num 60)  "adult"]
+            [#T            "almost dead"])
+        |]
+        `shouldReturn` Right [ValNil, ValString "adult"]
+
   describe "core > length" $ do
     it "returns length of list" $ do
       evalExpr

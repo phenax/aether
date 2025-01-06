@@ -17,9 +17,12 @@ interpretLiteral = \case
 interpretExpression :: Expr -> Evaluator m EvalValue
 interpretExpression = \case
   ExprLiteral lit -> interpretLiteral lit
-  ExprSymbol sym -> gets (lookupSymbol sym) >>= maybe (throwError $ NameNotFound sym) pure
+  ExprSymbol sym -> do
+    -- Debug.traceShowM sym
+    gets (lookupSymbol sym) >>= maybe (throwError $ NameNotFound sym) pure
   ExprSymList [] -> pure ValNil
   ExprSymList (ExprSymbol name : argsE) -> do
+    -- Debug.traceShowM ("call", name)
     !builtinResult <- evaluateBuiltins name argsE
     case builtinResult of
       Just result -> pure result
@@ -111,6 +114,7 @@ evaluateBuiltins "car" [expr] = do
   res <- interpretExpression expr
   case res of
     ValQuoted (ExprSymList (first : _)) -> Just <$> interpretExpression first
+    ValQuoted (ExprSymList []) -> pure $ Just ValNil
     ValQuoted quote -> Just <$> interpretExpression quote
     _ -> pure . Just $ res
 evaluateBuiltins "car" _ = do throwError $ TypeError "Invalid number of arguments sent to car"
@@ -133,6 +137,7 @@ evaluateBuiltins "cons" [itemE, restE] = do
     ValQuoted (ExprSymList values) -> pure . Just $ ValQuoted (ExprSymList (ExprValue item : values))
     ValNil -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
     ValQuoted (ExprLiteral LitNil) -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
+    ValQuoted (ExprValue ValNil) -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
     _ -> pure . Just $ ValQuoted (ExprSymList [ExprValue item, ExprValue rest])
 evaluateBuiltins "cons" _ = do throwError $ TypeError "Invalid number of arguments sent to cons"
 

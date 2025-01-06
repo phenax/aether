@@ -1,7 +1,16 @@
 (define (list ... ls) ls)
 
 (define (null? null_item) (eq? null_item #nil))
+(set nil? null?)
 (set empty? null?)
+
+(define (cadr ls) (car (cdr ls)))
+(define (caddr ls) (cadr (cdr ls)))
+(set first car)
+(set second cadr)
+(set third caddr)
+(set head car)
+(set tail cdr)
 
 (define (length list)
   (define (length-inner ls acc)
