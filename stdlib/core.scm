@@ -60,5 +60,16 @@
       (list if (car (car cases))
         (cadr (car cases))
         (create-case (cdr cases)))))
-
   (create-case cases))
+
+;; Infix operator notation. (Always evaluates left to right)
+;; Example:
+;;    ($ 5 + ($ 2 * 2) * 3 - 1)
+(defmacro ($ start ... args)
+  (define (infix-in args value)
+    (if (empty? args)
+      value
+      (infix-in (cdr (cdr args))
+        (list (car args) value (cadr args)))))
+  (infix-in args start))
+

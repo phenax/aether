@@ -3,6 +3,7 @@
 (define (null? null_item) (eq? null_item #nil))
 (set nil? null?)
 (set empty? null?)
+(define (list? ls) (eq? (type ls) 'list))
 
 (define (cadr ls) (car (cdr ls)))
 (define (caddr ls) (cadr (cdr ls)))

@@ -154,7 +154,7 @@ test = do
         `shouldReturn` Right [ValNumber 14]
 
   describe "core > cond" $ do
-    it "creates a binding within the given scope" $ do
+    it "allows building up conditionals" $ do
       evalExpr
         [i|
           (set num 50)
@@ -202,3 +202,12 @@ test = do
   describe "core > const" $ do
     it "returns first arg" $ do
       evalExpr [i| ((const 20) 99) |] `shouldReturn` Right [ValNumber 20]
+
+  describe "core > infix" $ do
+    it "allows using infix notation evaluated left to right" $ do
+      evalExpr
+        [i|
+          ($ 2 * ($ 5 + 2))
+          <$ 5 + <$ 9 - 3> * 2>
+        |]
+        `shouldReturn` Right [ValNumber 14, ValNumber 22]
