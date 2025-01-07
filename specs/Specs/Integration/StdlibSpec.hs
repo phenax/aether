@@ -25,6 +25,7 @@ test = do
             (+ 8 34)
           |]
           `shouldReturn` Right [ValNil, ValNumber 42.0, ValNumber 42.0]
+
     context "with overridden symbol for subtraction" $ do
       it "evaluates successfully" $ do
         evalExpr
@@ -248,3 +249,33 @@ test = do
             (range (- 2) (- 3))
           |]
           `shouldReturn` Right [ValNil, ValNil]
+
+  describe "builtin > type" $ do
+    it "returns correct types for given values" $ do
+      evalExpr
+        [i|
+          (type '(1 2 3))
+          (type '())
+          (type 200)
+          (type "hello")
+          (type 'hello)
+          (type '"hello world")
+          (type #T)
+          (type #nil)
+          (type (-> [] 20))
+          (type +)
+          (type if)
+        |]
+        `shouldReturn` Right
+          [ ValQuoted (ExprSymbol "list"),
+            ValQuoted (ExprSymbol "list"),
+            ValQuoted (ExprSymbol "number"),
+            ValQuoted (ExprSymbol "string"),
+            ValQuoted (ExprSymbol "symbol"),
+            ValQuoted (ExprSymbol "quote"),
+            ValQuoted (ExprSymbol "boolean"),
+            ValQuoted (ExprSymbol "list"),
+            ValQuoted (ExprSymbol "function"),
+            ValQuoted (ExprSymbol "function"),
+            ValQuoted (ExprSymbol "macro")
+          ]

@@ -1,19 +1,4 @@
 ; Symbol overrides for builtin operators
-; TODO: Remove after reworking primitives as symbols
-(define (+ a b) (+ a b))
-(define (- a b) (- a b))
-(define (* a b) (* a b))
-(define (/ a b) (/ a b))
-(define (lt? a b) (lt? a b))
-(define (gt? a b) (gt? a b))
-(define (lte? a b) (lte? a b))
-(define (gte? a b) (gte? a b))
-(define (eq? a b) (eq? a b))
-(define (&& a b) (&& a b))
-(define (|| a b) (|| a b))
-(define (car ls) (car ls))
-(define (cdr ls) (cdr ls))
-(define (set k v) (set k v))
 
 ; Primitives
 (define (id x) x)

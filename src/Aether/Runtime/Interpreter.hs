@@ -4,8 +4,44 @@ import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupS
 import Aether.Runtime.Value
 import Aether.Types
 import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
-import Control.Monad.State.Strict (MonadIO, StateT (runStateT), gets, modify')
+import Control.Monad.State.Strict (MonadIO, MonadState, StateT (runStateT), gets, modify')
 import qualified Data.Map.Strict as Map
+
+subtractVal :: (Num a) => [a] -> a
+subtractVal [] = 0
+subtractVal [x] = -x
+subtractVal (x : xs) = x - sum xs
+
+divideVal :: (Fractional a) => [a] -> a
+divideVal [] = 1
+divideVal (x : xs) = x / product xs
+
+builtins :: (MonadState EvalEnvironment m, MonadError EvalError m) => m (Map.Map Name ([Expr] -> m EvalValue))
+builtins =
+  pure $
+    Map.fromList
+      [ ("set", builtinSetE),
+        ("->", builtinLambdaE),
+        ("define", builtinDefineE),
+        ("defmacro", builtinDefmacroE),
+        ("do", builtinDoE),
+        ("eval", builtinEvalE),
+        ("car", builtinCarE),
+        ("cdr", builtinCdrE),
+        ("cons", builtinConsE),
+        ("+", operateOnExprs (ValNumber . sum . fmap valToNumber)),
+        ("*", operateOnExprs (ValNumber . product . fmap valToNumber)),
+        ("-", operateOnExprs (ValNumber . subtractVal . fmap valToNumber)),
+        ("/", operateOnExprs (ValNumber . divideVal . fmap valToNumber)),
+        ("lt?", builtinLessThan),
+        ("gt?", builtinGreaterThan),
+        ("lte?", builtinLessThanOrEqualTo),
+        ("gte?", builtinGreaterThanOrEqualTo),
+        ("eq?", operateOnExprs (ValBool . checkIfAllEqual)),
+        ("&&", operateOnExprs (ValBool . all valToBool)),
+        ("||", operateOnExprs (ValBool . any valToBool)),
+        ("type", builtinTypeOf)
+      ]
 
 interpretLiteral :: Literal -> Evaluator m EvalValue
 interpretLiteral = \case
@@ -14,19 +50,16 @@ interpretLiteral = \case
   LitNumber num -> pure $ ValNumber num
   LitNil -> pure ValNil
 
-interpretExpression :: Expr -> Evaluator m EvalValue
+interpretExpression :: forall m. (MonadState EvalEnvironment m, MonadError EvalError m) => Expr -> Evaluator m EvalValue
 interpretExpression = \case
   ExprLiteral lit -> interpretLiteral lit
   ExprSymbol sym -> do
-    -- Debug.traceShowM sym
-    gets (lookupSymbol sym) >>= maybe (throwError $ NameNotFound sym) pure
+    isBuiltin <- Map.member sym <$> builtins
+    let fallback
+          | isBuiltin = pure $ ValBuiltin sym
+          | otherwise = throwError $ NameNotFound sym
+    gets (lookupSymbol sym) >>= maybe fallback pure
   ExprSymList [] -> pure ValNil
-  ExprSymList (ExprSymbol name : argsE) -> do
-    -- Debug.traceShowM ("call", name)
-    !builtinResult <- evaluateBuiltins name argsE
-    case builtinResult of
-      Just result -> pure result
-      Nothing -> interpretExpression (ExprSymbol name) >>= (`evaluateCall` argsE)
   ExprSymList (fnE : argsE) -> interpretExpression fnE >>= (`evaluateCall` argsE)
   ExprUnquoted _expr -> undefined -- TODO: either throw error or `interpretExpression expr`
   ExprSpliced _expr -> undefined -- same interpretExpression expr
@@ -54,124 +87,111 @@ interpretExpression = \case
       expandSymList (ValQuoted sym@(ExprSymbol _)) = interpretExpression sym >>= expandSymList
       expandSymList e = pure [ExprValue e]
 
-evaluateBuiltins :: String -> [Expr] -> Evaluator m (Maybe EvalValue)
--- Set a value in current scope
-evaluateBuiltins "set" [ExprSymbol name, valueE] = do
+builtinSetE :: [Expr] -> Evaluator m EvalValue
+builtinSetE [ExprSymbol name, valueE] = do
   !value <- interpretExpression valueE
   modify' $ defineInCurrentScope name value
-  pure $ Just ValNil
-evaluateBuiltins "set" args = do throwError $ TypeError $ "Invalid call to set: " ++ show args
+  pure ValNil
+builtinSetE args = do throwError $ TypeError $ "Invalid call to set: " ++ show args
 
--- Lambda expression syntax
-evaluateBuiltins "->" (ExprSymList argsE : bodyE) = do
+builtinLambdaE :: [Expr] -> Evaluator m EvalValue
+builtinLambdaE (ExprSymList argsE : bodyE) = do
   stack <- gets envCallStack
-  pure . Just $ ValLambda stack argLabels body
+  pure $ ValLambda stack argLabels body
   where
     argLabels = argToLabel <$> argsE
     body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
-evaluateBuiltins "->" _ = do throwError $ TypeError "Invalid call to ->"
+builtinLambdaE _ = do throwError $ TypeError "Invalid call to ->"
 
--- Define lambda in current scope
-evaluateBuiltins "define" (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
+builtinDefineE :: [Expr] -> Evaluator m EvalValue
+builtinDefineE (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
   stack <- gets envCallStack
   modify' $ defineInCurrentScope name (ValLambda stack argLabels body)
-  pure $ Just ValNil
+  pure ValNil
   where
     argLabels = argToLabel <$> argsE
     body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
-evaluateBuiltins "define" _ = do throwError $ TypeError "Invalid call to define"
+builtinDefineE _ = do throwError $ TypeError "Invalid call to define"
 
--- Define macro in current scope
-evaluateBuiltins "defmacro" (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
+builtinDefmacroE :: [Expr] -> Evaluator m EvalValue
+builtinDefmacroE (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
   stack <- gets envCallStack
   modify' (defineInCurrentScope name $ ValMacro stack argLabels body)
-  pure $ Just ValNil
+  pure ValNil
   where
     argLabels = argToLabel <$> argsE
     body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
-evaluateBuiltins "defmacro" _ = do throwError $ TypeError "Invalid call to defmacro"
+builtinDefmacroE _ = do throwError $ TypeError "Invalid call to defmacro"
 
--- Do syntax (chained expressions)
-evaluateBuiltins "do" body = do
+builtinDoE :: [Expr] -> Evaluator m EvalValue
+builtinDoE body = do
   (Stack stack) <- gets envCallStack
   !scope <- mkScope Map.empty
   !results <- closure (Stack $ scope : stack) $ do
     mapM interpretExpression body
-  pure $ Just $ case results of
+  pure $ case results of
     [] -> ValNil
     _ -> last results
 
--- Evaluate a quoted expression
-evaluateBuiltins "eval" [expr] = do
+builtinEvalE :: [Expr] -> Evaluator m EvalValue
+builtinEvalE [expr] = do
   res <- interpretExpression expr
   case res of
-    ValQuoted quote -> Just <$> interpretExpression quote
-    _ -> pure . Just $ res
-evaluateBuiltins "eval" _ = do throwError $ TypeError "Invalid number of arguments sent to eval"
+    ValQuoted quote -> interpretExpression quote
+    _ -> pure res
+builtinEvalE _ = do throwError $ TypeError "Invalid number of arguments sent to eval"
 
--- Get first element from quoted symlist
-evaluateBuiltins "car" [expr] = do
+builtinCarE :: [Expr] -> Evaluator m EvalValue
+builtinCarE [expr] = do
   res <- interpretExpression expr
   case res of
-    ValQuoted (ExprSymList (first : _)) -> Just <$> interpretExpression first
-    ValQuoted (ExprSymList []) -> pure $ Just ValNil
-    ValQuoted quote -> Just <$> interpretExpression quote
-    _ -> pure . Just $ res
-evaluateBuiltins "car" _ = do throwError $ TypeError "Invalid number of arguments sent to car"
+    ValQuoted (ExprSymList (first : _)) -> interpretExpression first
+    ValQuoted (ExprSymList []) -> pure ValNil
+    ValQuoted quote -> interpretExpression quote
+    _ -> pure res
+builtinCarE _ = do throwError $ TypeError "Invalid number of arguments sent to car"
 
--- Get tail elements from quoted symlist
-evaluateBuiltins "cdr" [expr] = do
+builtinCdrE :: [Expr] -> Evaluator m EvalValue
+builtinCdrE [expr] = do
   res <- interpretExpression expr
   case res of
-    ValQuoted (ExprSymList [_]) -> pure $ Just ValNil
+    ValQuoted (ExprSymList [_]) -> pure ValNil
     ValQuoted (ExprSymList (_ : rest)) ->
-      Just . ValQuoted . ExprSymList . fmap ExprValue <$> mapM interpretExpression rest
-    _ -> pure $ Just ValNil
-evaluateBuiltins "cdr" _ = do throwError $ TypeError "Invalid number of arguments sent to cdr"
+      ValQuoted . ExprSymList . fmap ExprValue <$> mapM interpretExpression rest
+    _ -> pure ValNil
+builtinCdrE _ = do throwError $ TypeError "Invalid number of arguments sent to cdr"
 
--- Construct pair
-evaluateBuiltins "cons" [itemE, restE] = do
+builtinConsE :: [Expr] -> Evaluator m EvalValue
+builtinConsE [itemE, restE] = do
   item <- interpretExpression itemE
   rest <- interpretExpression restE
   case rest of
-    ValQuoted (ExprSymList values) -> pure . Just $ ValQuoted (ExprSymList (ExprValue item : values))
-    ValNil -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
-    ValQuoted (ExprLiteral LitNil) -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
-    ValQuoted (ExprValue ValNil) -> pure . Just $ ValQuoted (ExprSymList [ExprValue item])
-    _ -> pure . Just $ ValQuoted (ExprSymList [ExprValue item, ExprValue rest])
-evaluateBuiltins "cons" _ = do throwError $ TypeError "Invalid number of arguments sent to cons"
+    ValQuoted (ExprSymList values) -> pure $ ValQuoted (ExprSymList (ExprValue item : values))
+    ValNil -> pure $ ValQuoted (ExprSymList [ExprValue item])
+    ValQuoted (ExprLiteral LitNil) -> pure $ ValQuoted (ExprSymList [ExprValue item])
+    ValQuoted (ExprValue ValNil) -> pure $ ValQuoted (ExprSymList [ExprValue item])
+    _ -> pure $ ValQuoted (ExprSymList [ExprValue item, ExprValue rest])
+builtinConsE _ = do throwError $ TypeError "Invalid number of arguments sent to cons"
 
--- Math operations
-evaluateBuiltins "+" exprs = Just <$> operateOnExprs (ValNumber . sum . fmap valToNumber) exprs
-evaluateBuiltins "*" exprs = Just <$> operateOnExprs (ValNumber . product . fmap valToNumber) exprs
-evaluateBuiltins "-" exprs = Just <$> operateOnExprs (ValNumber . subtractVal . fmap valToNumber) exprs
-  where
-    subtractVal [] = 0
-    subtractVal [x] = -x
-    subtractVal (x : xs) = x - sum xs
-evaluateBuiltins "/" exprs = Just <$> operateOnExprs (ValNumber . divideVal . fmap valToNumber) exprs
-  where
-    divideVal [] = 1
-    divideVal (x : xs) = x / product xs
+builtinLessThan :: [Expr] -> Evaluator m EvalValue
+builtinLessThan [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a <)) exp1 exp2
+builtinLessThan _ = throwError $ TypeError "Invalid number of arguments for lt?"
 
--- Comparison operations
-evaluateBuiltins "lt?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a <)) exp1 exp2
-evaluateBuiltins "lt?" _ = throwError $ TypeError "Invalid number of arguments for lt?"
-evaluateBuiltins "gt?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a >)) exp1 exp2
-evaluateBuiltins "gt?" _ = throwError $ TypeError "Invalid number of arguments for gt?"
-evaluateBuiltins "lte?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a <=)) exp1 exp2
-evaluateBuiltins "lte?" _ = throwError $ TypeError "Invalid number of arguments for lte?"
-evaluateBuiltins "gte?" [exp1, exp2] = Just <$> numberBinaryOp (\a -> ValBool . (a >=)) exp1 exp2
-evaluateBuiltins "gte?" _ = throwError $ TypeError "Invalid number of arguments for gte?"
-evaluateBuiltins "eq?" exprs = Just <$> operateOnExprs (ValBool . checkIfAllEqual) exprs
--- Boolean operations
-evaluateBuiltins "&&" exprs = Just <$> operateOnExprs (ValBool . all valToBool) exprs
-evaluateBuiltins "||" exprs = Just <$> operateOnExprs (ValBool . any valToBool) exprs
--- Type helpers
-evaluateBuiltins "type" [expr] = Just . ValQuoted . ExprSymbol . typeOfValue <$> interpretExpression expr
-evaluateBuiltins "lt?" _ = throwError $ TypeError "Invalid number of arguments for lt?"
---
-evaluateBuiltins _ _ = pure Nothing
+builtinGreaterThan :: [Expr] -> Evaluator m EvalValue
+builtinGreaterThan [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a >)) exp1 exp2
+builtinGreaterThan _ = throwError $ TypeError "Invalid number of arguments for gt?"
+
+builtinLessThanOrEqualTo :: [Expr] -> Evaluator m EvalValue
+builtinLessThanOrEqualTo [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a <=)) exp1 exp2
+builtinLessThanOrEqualTo _ = throwError $ TypeError "Invalid number of arguments for lte?"
+
+builtinGreaterThanOrEqualTo :: [Expr] -> Evaluator m EvalValue
+builtinGreaterThanOrEqualTo [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a >=)) exp1 exp2
+builtinGreaterThanOrEqualTo _ = throwError $ TypeError "Invalid number of arguments for gte?"
+
+builtinTypeOf :: [Expr] -> Evaluator m EvalValue
+builtinTypeOf [expr] = ValQuoted . ExprSymbol . typeOfValue <$> interpretExpression expr
+builtinTypeOf _ = throwError $ TypeError "Invalid number of arguments for type"
 
 numberBinaryOp :: (Double -> Double -> EvalValue) -> Expr -> Expr -> Evaluator m EvalValue
 numberBinaryOp fn exp1 exp2 = do
@@ -212,6 +232,13 @@ evaluateCall (ValMacro (Stack _defnstack) labels body) argsE = do
     unwrapQuotes (ExprValue (ValQuoted (ExprSymList exprs))) = ExprSymList $ map unwrapQuotes exprs
     unwrapQuotes (ExprValue (ValQuoted e)) = e
     unwrapQuotes e = e
+
+-- Primitive evaluation
+evaluateCall (ValBuiltin name) argsE = do
+  builtin <- Map.lookup name <$> builtins
+  case builtin of
+    Just eval -> eval argsE
+    Nothing -> throwError $ UnknownError "Primtive not defined"
 
 -- Quoted values
 evaluateCall (ValQuoted quote) argsE = do

@@ -10,7 +10,7 @@
   - (x) Add distinction between `,` and `,@` for splicing
   - (x) Tests for defmacro
   - (x) Macro for infix operators
-  - ( ) Generate "primitive lambda" for builtins on symbol lookup
+  - (x) Generate "primitive lambda" for builtins on symbol lookup
   - ( ) IO interface: display, displayNl
   - ( ) Struct/Record
   - ( ) Error handling (pcall style or try/catch)

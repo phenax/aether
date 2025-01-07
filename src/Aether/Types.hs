@@ -6,6 +6,8 @@ import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Language.Haskell.TH.Lift (deriveLiftMany)
 
+type Name = String
+
 data Literal
   = LitBool !Bool
   | LitNil
@@ -17,7 +19,7 @@ data Expr
   = ExprLiteral !Literal
   | ExprQuoted !Expr
   | ExprSymList ![Expr]
-  | ExprSymbol !String
+  | ExprSymbol !Name
   | ExprUnquoted !Expr
   | ExprSpliced !Expr
   | ExprValue !EvalValue
@@ -27,6 +29,7 @@ data EvalValue
   = ValBool !Bool
   | ValLambda !Stack ![String] !Expr
   | ValMacro !Stack ![String] !Expr
+  | ValBuiltin Name
   | ValNil
   | ValNumber !Double
   | ValQuoted !Expr
@@ -36,7 +39,7 @@ data EvalValue
 data EvalError
   = ArgumentError String
   | TypeError String
-  | NameNotFound String
+  | NameNotFound Name
   | UnknownError String
   deriving (Show, Eq)
 

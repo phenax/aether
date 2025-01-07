@@ -3,7 +3,6 @@ module Specs.Integration.InterpreterSpec where
 import Aether.Runtime (runInterpreter)
 import Aether.Syntax.Parser
 import Aether.Types
-import qualified Data.Map.Strict as Map
 import Data.String.Interpolate.IsString
 import Test.Hspec
 import Text.Megaparsec (errorBundlePretty)
@@ -23,26 +22,9 @@ test = do
           [i|
             (define (foobar a b) (+ a b))
             (foobar 20 7)
+            (fold + 0 '(1 2 3))
           |]
-          `shouldReturn` Right [ValNil, ValNumber 27.0]
-
-    context "with overridden symbol for addition" $ do
-      it "evaluates successfully" $ do
-        evalExpr
-          [i|
-            (define (binary-op op a b) (op a b))
-            (set + (-> [a b] (+ a b)))
-            +
-            (binary-op + 8 34)
-            (+ 8 34)
-          |]
-          `shouldReturn` Right
-            [ ValNil,
-              ValNil,
-              ValLambda (Stack []) ["a", "b"] $ ExprSymList [ExprSymbol "+", ExprSymbol "a", ExprSymbol "b"],
-              ValNumber 42.0,
-              ValNumber 42.0
-            ]
+          `shouldReturn` Right [ValNil, ValNumber 27, ValNumber 6]
 
     context "with math operators" $ do
       it "evaluates successfully" $ do
@@ -305,7 +287,7 @@ test = do
                   ]
             ]
 
-    context "factorial example" $ do
+    describe "example/factorial" $ do
       it "evaluates successfully" $ do
         evalExpr
           [i|
