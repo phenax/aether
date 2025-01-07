@@ -211,3 +211,40 @@ test = do
           <$ 5 + <$ 9 - 3> * 2>
         |]
         `shouldReturn` Right [ValNumber 14, ValNumber 22]
+
+  describe "core > range" $ do
+    it "generates a range of numbers" $ do
+      evalExpr
+        [i|
+          (range 2 5)
+          (range (- 2) 3)
+          (range 5 5)
+        |]
+        `shouldReturn` Right
+          [ ValQuoted $
+              ExprSymList
+                [ ExprValue (ValNumber 2),
+                  ExprValue (ValNumber 3),
+                  ExprValue (ValNumber 4),
+                  ExprValue (ValNumber 5)
+                ],
+            ValQuoted $
+              ExprSymList
+                [ ExprValue (ValNumber (-2)),
+                  ExprValue (ValNumber (-1)),
+                  ExprValue (ValNumber 0),
+                  ExprValue (ValNumber 1),
+                  ExprValue (ValNumber 2),
+                  ExprValue (ValNumber 3)
+                ],
+            ValQuoted $ ExprSymList [ExprValue (ValNumber 5)]
+          ]
+
+    context "when start is greater than end" $ do
+      it "returns an empty list" $ do
+        evalExpr
+          [i|
+            (range 5 2)
+            (range (- 2) (- 3))
+          |]
+          `shouldReturn` Right [ValNil, ValNil]

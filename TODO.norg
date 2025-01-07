@@ -7,37 +7,42 @@
   - (x) Fix lambda scope to be scope of definition and not call site
   - (x) Var args
   - (x) List operations
-  - ( ) Add distinction between `,` and `,@` for splicing
-  - ( ) Tests for defmacro
+  - (x) Add distinction between `,` and `,@` for splicing
+  - (x) Tests for defmacro
+  - (x) Macro for infix operators
+  - ( ) Generate "primitive lambda" for builtins on symbol lookup
   - ( ) IO interface: display, displayNl
-  - ( ) Generate "lambda" for builtins on symbol lookup
-  - ( ) Data structures: dictionary
-  - ( ) Struct
+  - ( ) Struct/Record
+  - ( ) Error handling (pcall style or try/catch)
+  - ( ) Type validation util
   - ( ) Allow list operations on string
+  - ( ) Add source location for Expr type
   - ( ) Stack trace
   - ( ) Cleanup your shitty spec
+  - ( ) Shortcircuiting for &&, ||, eq?
 
 * Later
   - ( ) Repl
-  - ( ) Shortcircuiting for &&, ||, eq?
-  - ( ) Macro for infix operators
+  - ( ) Shell commands
   - ( ) Optimize interpreter perfomance
   - ( ) Socket server mode + socket for commands
   - ( ) UI for sending commands (dmenu-like)
   - ( ) UI repl completion
   - ( ) UI repl highlighting
   - ( ) Parser: Allow string escaping \"
+  - ( ) IO interface: read from stdin
+  - ( ) Read/Write files
 
 * Maybe
   - ( ) JIT
-  - ( ) Treesitter to update files
-  - ( ) Notifications integration
   - ( ) Record and replay keystrokes/mouse events?
 
 * Integration ideas
   - ( ) UI elements with gtk, qt or sdl
-  - ( ) Thunderbird integration
-  - ( ) Timer/reminder
   - ( ) Quick notes
   - ( ) Quick bookmarking
+  - ( ) Timer/reminder
+  - ( ) Thunderbird integration
+  - ( ) Notifications integration
+  - ( ) Treesitter based structured file editing?
 

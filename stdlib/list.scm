@@ -41,3 +41,8 @@
       (-> [result val] (cons (fn val) result))
       '[]
       list)))
+
+(define (range start end)
+  (if (gt? start end)
+    '()
+    (cons start (range (+ start 1) end))))
