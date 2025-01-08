@@ -81,7 +81,7 @@ deriving instance (MonadState s m) => MonadState s (LangIOT m)
 deriving instance (MonadError e m) => MonadError e (LangIOT m)
 
 instance (MonadIO m) => MonadLangIO (LangIOT m) where
-  putStringToScreen = LangIOT . liftIO . putStrLn
+  putStringToScreen = LangIOT . liftIO . putStr
 
 type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m a
 

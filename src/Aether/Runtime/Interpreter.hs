@@ -43,7 +43,7 @@ builtins =
         ("||", operateOnExprs (ValBool . any valToBool)),
         ("type", builtinTypeOf),
         ("display", builtinDisplay),
-        ("display", builtinDisplay . (++ [ExprLiteral $ LitString "\n"]))
+        ("displayNl", builtinDisplay . (++ [ExprLiteral $ LitString "\n"]))
       ]
 
 builtinDisplay :: [Expr] -> Evaluator m EvalValue

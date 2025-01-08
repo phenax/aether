@@ -11,7 +11,7 @@
   - (x) Tests for defmacro
   - (x) Macro for infix operators
   - (x) Generate "primitive lambda" for builtins on symbol lookup
-  - ( ) IO interface: display, displayNl
+  - (x) IO interface: display, displayNl
   - ( ) Struct/Record
   - ( ) Error handling (pcall style or try/catch)
   - ( ) Type validation util
