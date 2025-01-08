@@ -44,3 +44,25 @@ typeOfValue (ValQuoted (ExprSymbol _)) = "symbol"
 typeOfValue (ValQuoted _) = "quote"
 typeOfValue (ValString _) = "string"
 typeOfValue ValNil = "list"
+
+showEvalValue :: EvalValue -> String
+showEvalValue ValNil = "#nil"
+showEvalValue (ValBool bool) = if bool then "#T" else "#F"
+showEvalValue (ValString str) = str
+showEvalValue (ValNumber n) = show n
+showEvalValue (ValLambda _ args body) = "(-> [" ++ unwords args ++ "]" ++ showExpr body ++ ")"
+showEvalValue (ValQuoted expr) = '\'' : showExpr expr
+showEvalValue (ValMacro {}) = "<macro>"
+showEvalValue (ValBuiltin s) = "<builtin: " ++ s ++ ">"
+
+showExpr :: Expr -> String
+showExpr (ExprLiteral (LitString s)) = s
+showExpr (ExprLiteral (LitNumber n)) = showEvalValue $ ValNumber n
+showExpr (ExprLiteral (LitBool b)) = showEvalValue $ ValBool b
+showExpr (ExprLiteral LitNil) = showEvalValue ValNil
+showExpr (ExprSymList ls) = "(" ++ unwords (map showExpr ls) ++ ")"
+showExpr (ExprQuoted quote) = '\'' : showExpr quote
+showExpr (ExprSpliced expr) = ",@" ++ showExpr expr
+showExpr (ExprUnquoted expr) = ',' : showExpr expr
+showExpr (ExprSymbol s) = "<symbol: " ++ s ++ ">"
+showExpr (ExprValue v) = showEvalValue v

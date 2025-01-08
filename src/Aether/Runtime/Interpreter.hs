@@ -3,6 +3,7 @@ module Aether.Runtime.Interpreter where
 import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupSymbol, mkScope)
 import Aether.Runtime.Value
 import Aether.Types
+import Control.Monad ((>=>))
 import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
 import Control.Monad.State.Strict (MonadIO, MonadState, StateT (runStateT), gets, modify')
 import qualified Data.Map.Strict as Map
@@ -16,7 +17,7 @@ divideVal :: (Fractional a) => [a] -> a
 divideVal [] = 1
 divideVal (x : xs) = x / product xs
 
-builtins :: (MonadState EvalEnvironment m, MonadError EvalError m) => m (Map.Map Name ([Expr] -> m EvalValue))
+builtins :: (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m (Map.Map Name ([Expr] -> m EvalValue))
 builtins =
   pure $
     Map.fromList
@@ -40,8 +41,16 @@ builtins =
         ("eq?", operateOnExprs (ValBool . checkIfAllEqual)),
         ("&&", operateOnExprs (ValBool . all valToBool)),
         ("||", operateOnExprs (ValBool . any valToBool)),
-        ("type", builtinTypeOf)
+        ("type", builtinTypeOf),
+        ("display", builtinDisplay),
+        ("display", builtinDisplay . (++ [ExprLiteral $ LitString "\n"]))
       ]
+
+builtinDisplay :: [Expr] -> Evaluator m EvalValue
+builtinDisplay exprs = do
+  let displayVal = putStringToScreen . showEvalValue
+  mapM_ (interpretExpression >=> displayVal) exprs
+  pure ValNil
 
 interpretLiteral :: Literal -> Evaluator m EvalValue
 interpretLiteral = \case
@@ -50,7 +59,7 @@ interpretLiteral = \case
   LitNumber num -> pure $ ValNumber num
   LitNil -> pure ValNil
 
-interpretExpression :: forall m. (MonadState EvalEnvironment m, MonadError EvalError m) => Expr -> Evaluator m EvalValue
+interpretExpression :: Expr -> Evaluator m EvalValue
 interpretExpression = \case
   ExprLiteral lit -> interpretLiteral lit
   ExprSymbol sym -> do
@@ -245,7 +254,7 @@ evaluateCall (ValQuoted quote) argsE = do
   !fn <- interpretExpression quote
   evaluateCall fn argsE
 
--- Booleans are callable (Kite/Kestral)
+-- Booleans are callable
 evaluateCall (ValBool bool) argsE = do
   case argsE of
     (then_ : _) | bool -> interpretExpression then_
@@ -255,14 +264,16 @@ evaluateCall (ValBool bool) argsE = do
 -- Invald call
 evaluateCall value _args = do throwError $ TypeError $ "Can't call value: " ++ show value -- ++ " with: " ++ show args
 
-interpretAll :: [Expr] -> Evaluator m [EvalValue]
-interpretAll = mapM interpretExpression
-
-runExprEvaluatorWithCallStack :: (MonadIO m) => ExceptT EvalError (StateT EvalEnvironment m) a -> EvalEnvironment -> m (Either EvalError a, EvalEnvironment)
-runExprEvaluatorWithCallStack = runStateT . runExceptT
-
-runInterpreterRaw :: (MonadIO m) => EvalEnvironment -> [Expr] -> m (Either EvalError [EvalValue], EvalEnvironment)
-runInterpreterRaw env = (`runExprEvaluatorWithCallStack` env) . interpretAll
+--
+runExprEvaluatorWithCallStack ::
+  (MonadIO m) =>
+  LangIOT (ExceptT EvalError (StateT EvalEnvironment m)) a ->
+  EvalEnvironment ->
+  m (Either EvalError a, EvalEnvironment)
+runExprEvaluatorWithCallStack m = runStateT (runExceptT $ runLangIOT m)
 
 runExprInterpreterRaw :: (MonadIO m) => EvalEnvironment -> Expr -> m (Either EvalError EvalValue, EvalEnvironment)
 runExprInterpreterRaw env = (`runExprEvaluatorWithCallStack` env) . interpretExpression
+
+runInterpreterRaw :: (MonadIO m) => EvalEnvironment -> [Expr] -> m (Either EvalError [EvalValue], EvalEnvironment)
+runInterpreterRaw env = (`runExprEvaluatorWithCallStack` env) . mapM interpretExpression

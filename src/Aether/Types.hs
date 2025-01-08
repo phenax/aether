@@ -1,7 +1,7 @@
 module Aether.Types where
 
 import Control.Monad.Except (MonadError)
-import Control.Monad.RWS.Strict (MonadState)
+import Control.Monad.RWS.Strict (MonadIO (liftIO), MonadState)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Language.Haskell.TH.Lift (deriveLiftMany)
@@ -70,6 +70,19 @@ instance Semigroup EvalEnvironment where
 instance Monoid EvalEnvironment where
   mempty = EvalEnvironment {envScopeId = 1, envCallStack = Stack [Scope {scopeId = ScopeId 0, scopeTable = Map.empty}]}
 
-type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m) => m a
+class (Monad m) => MonadLangIO m where
+  putStringToScreen :: String -> m ()
+
+newtype LangIOT m a = LangIOT {runLangIOT :: m a}
+  deriving (Functor, Applicative, Monad)
+
+deriving instance (MonadState s m) => MonadState s (LangIOT m)
+
+deriving instance (MonadError e m) => MonadError e (LangIOT m)
+
+instance (MonadIO m) => MonadLangIO (LangIOT m) where
+  putStringToScreen = LangIOT . liftIO . putStrLn
+
+type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m a
 
 $(deriveLiftMany [''Literal, ''Expr, ''EvalValue, ''EvalError, ''ScopeId, ''Scope, ''Stack])
