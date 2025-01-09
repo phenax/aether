@@ -15,3 +15,6 @@ testw *args:
 
 build:
   nix build
+
+clean:
+  cabal clean

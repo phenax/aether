@@ -1,5 +1,3 @@
-; Symbol overrides for builtin operators
-
 ; Primitives
 (define (id x) x)
 (define (const x) (-> [_] x))
@@ -16,8 +14,8 @@
 ;;   (if (gt? num 10)
 ;;     "multi-digit"
 ;;     "single-digit")
-(defmacro (if cond then else)
-  '(,cond ,then ,else))
+(defmacro (if bool then else)
+  '(,bool ,then ,else))
 
 ;; Let bindings
 ;; Example:
@@ -57,4 +55,23 @@
       (infix-in (cdr (cdr args))
         (list (car args) value (cadr args)))))
   (infix-in args start))
+
+;; Create a record
+;; Example: 
+;;   (record Person
+;;     :name
+;;     :age
+;;     :gender)
+;;
+;;   (set john (Person "John" 25 'male))
+;;   (displayNl (:gender john))
+(defmacro (record type-name ... properties)
+  (define (mk-get index) (-> [obj] (elem-at index obj)))
+
+  '(progn
+    ,(list 'set type-name list)
+    ,@(zip-with
+        (-> [prop index] (list 'set prop (mk-get index)))
+        properties
+        (indexes properties))))
 

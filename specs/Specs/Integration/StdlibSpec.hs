@@ -279,3 +279,113 @@ test = do
             ValQuoted (ExprSymbol "function"),
             ValQuoted (ExprSymbol "macro")
           ]
+
+  describe "core > record" $ do
+    it "creates constructor and property getters for given record" $ do
+      evalExpr
+        [i|
+          (record Person
+            :name
+            :age
+            :gender)
+          (set john (Person "John" 25 'male))
+          (:name john)
+          (:gender john)
+          (:age john)
+        |]
+        `shouldReturn` Right
+          [ ValNil,
+            ValNil,
+            ValString "John",
+            ValQuoted $ ExprSymbol "male",
+            ValNumber 25
+          ]
+
+  describe "core > elem-at" $ do
+    it "returns element at index in a list" $ do
+      evalExpr
+        [i|
+          (elem-at 1 (list 99 38 2 23))
+          (elem-at 0 (list 99 38 2 23))
+          (elem-at 99 (list 99 38 2 23))
+        |]
+        `shouldReturn` Right
+          [ ValNumber 38,
+            ValNumber 99,
+            ValNil
+          ]
+
+    context "when index is out of bounds" $ do
+      it "returns nil" $ do
+        evalExpr
+          [i|
+            (elem-at 99 (list 99 38 2 23))
+            (elem-at (- 1) (list 99 38 2 23))
+            |]
+          `shouldReturn` Right [ValNil, ValNil]
+
+  describe "core > zip-with" $ do
+    it "returns a lists zipped with given function" $ do
+      evalExpr
+        [i|
+          (zip-with
+            tuple
+            (list 1 2 3)
+            (list 4 5 6))
+        |]
+        `shouldReturn` Right
+          [ ValQuoted $
+              ExprSymList
+                [ ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
+                  ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5],
+                  ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 3, ExprValue $ ValNumber 6]
+                ]
+          ]
+
+    context "when list lengths are different" $ do
+      it "returns the smallest number of items zipped in the list" $ do
+        evalExpr
+          [i|
+            (zip-with tuple (list 1 2) (list 4 5 6))
+            (zip-with tuple (list 1 2 3) (list 4 5))
+          |]
+          `shouldReturn` Right
+            [ ValQuoted $
+                ExprSymList
+                  [ ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
+                    ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5]
+                  ],
+              ValQuoted $
+                ExprSymList
+                  [ ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
+                    ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5]
+                  ]
+            ]
+
+  describe "core > index-of" $ do
+    it "returns the index of given item" $ do
+      evalExpr
+        [i|
+          (set ls (list 1 1 2 3 5 8 13 21))
+          (index-of 8 ls)
+          (index-of 21 ls)
+          (index-of 1 ls)
+        |]
+        `shouldReturn` Right [ValNil, ValNumber 5, ValNumber 7, ValNumber 0]
+
+    context "when item is not in list" $ do
+      it "returns nil" $ do
+        evalExpr
+          [i| (index-of 182 (list 1 1 2 3 5 8 13 21)) |]
+          `shouldReturn` Right [ValNil]
+
+  describe "core > contains" $ do
+    it "returns the index of given item" $ do
+      evalExpr
+        [i|
+          (set ls (list 1 1 2 3 5 8 13 21))
+          (contains 8 ls)
+          (contains 1 ls)
+          (contains 99 ls)
+        |]
+        `shouldReturn` Right [ValNil, ValBool True, ValBool True, ValBool False]

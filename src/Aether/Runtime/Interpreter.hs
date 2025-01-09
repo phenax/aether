@@ -26,6 +26,7 @@ builtins =
         ("define", builtinDefineE),
         ("defmacro", builtinDefmacroE),
         ("do", builtinDoE),
+        ("progn", builtinPrognE),
         ("eval", builtinEvalE),
         ("car", builtinCarE),
         ("cdr", builtinCdrE),
@@ -109,7 +110,7 @@ builtinLambdaE (ExprSymList argsE : bodyE) = do
   pure $ ValLambda stack argLabels body
   where
     argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "progn" : bodyE)
 builtinLambdaE _ = do throwError $ TypeError "Invalid call to ->"
 
 builtinDefineE :: [Expr] -> Evaluator m EvalValue
@@ -119,7 +120,7 @@ builtinDefineE (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
   pure ValNil
   where
     argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "progn" : bodyE)
 builtinDefineE _ = do throwError $ TypeError "Invalid call to define"
 
 builtinDefmacroE :: [Expr] -> Evaluator m EvalValue
@@ -138,6 +139,13 @@ builtinDoE body = do
   !scope <- mkScope Map.empty
   !results <- closure (Stack $ scope : stack) $ do
     mapM interpretExpression body
+  pure $ case results of
+    [] -> ValNil
+    _ -> last results
+
+builtinPrognE :: [Expr] -> Evaluator m EvalValue
+builtinPrognE body = do
+  results <- mapM interpretExpression body
   pure $ case results of
     [] -> ValNil
     _ -> last results

@@ -3,4 +3,5 @@
   (if (lte? num 1) 1
     (* num (factorial (- num 1)))))
 
-(factorial 10)
+(for (range 0 10) (-> [n]
+  (displayNl (list n (factorial n)))))
