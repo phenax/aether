@@ -4,6 +4,11 @@
 (define (not a) (a #F #T))
 (define (apply fn args) (eval '(,fn ,@args)))
 
+; Function
+(define (curry fn x) (-> [y] (fn x y)))
+(define (flip fn) (-> [x y] (fn y x)))
+(define (|> val ... fns) (fold (-> [v fn] (fn v)) val fns))
+
 ; Numbers
 (define (positive? num) (gt? num 0))
 (define (negative? num) (lt? num 0))

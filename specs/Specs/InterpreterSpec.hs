@@ -58,6 +58,20 @@ test = do
               ]
         evalExprs exprs `shouldReturn` Right [ValNil, ValNumber 42.0]
 
+      context "when trying to use value set inside a lambda" $ do
+        it "returns original value" $ do
+          let exprs =
+                [ ExprSymList [ExprSymbol "set", ExprSymbol "foobar", ExprLiteral $ LitNumber 42],
+                  ExprSymList
+                    [ ExprSymbol "define",
+                      ExprSymList [ExprSymbol "myfunc"],
+                      ExprSymList [ExprSymbol "set", ExprSymbol "foobar", ExprLiteral $ LitNumber 69]
+                    ],
+                  ExprSymList [ExprSymbol "myfunc"],
+                  ExprSymbol "foobar"
+                ]
+          evalExprs exprs `shouldReturn` Right [ValNil, ValNil, ValNil, ValNumber 42.0]
+
       context "when getting symbol of lambda" $ do
         it "returns with the last expression in body" $ do
           let exprs =

@@ -389,3 +389,15 @@ test = do
           (contains 99 ls)
         |]
         `shouldReturn` Right [ValNil, ValBool True, ValBool True, ValBool False]
+
+  describe "core > |>" $ do
+    it "pipes a value through a list of functions" $ do
+      evalExpr
+        [i|
+          (|> 20 (curry + 1) (curry * 2) (curry (flip -) 1))
+          {$ 20
+            |> (curry + 1)
+            |> (curry * 2)
+            |> (curry (flip -) 1)}
+        |]
+        `shouldReturn` Right [ValNumber 41, ValNumber 41]
