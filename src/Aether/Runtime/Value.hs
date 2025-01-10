@@ -29,7 +29,7 @@ checkIfEqual ValNil (ValQuoted (ExprSymList [])) = True
 checkIfEqual (ValQuoted (ExprSymbol v1)) (ValQuoted (ExprSymbol v2)) = v1 == v2
 checkIfEqual _ _ = False
 
-argToLabel :: Expr -> String
+argToLabel :: Expr -> Name
 argToLabel (ExprSymbol sym) = sym
 argToLabel _ = "_"
 

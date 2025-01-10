@@ -12,11 +12,12 @@
   - (x) Macro for infix operators
   - (x) Generate "primitive lambda" for builtins on symbol lookup
   - (x) IO interface: display, displayNl
-  - ( ) Struct/Record
+  - (x) Struct/Record
+  - ( ) Add source location for Expr type
   - ( ) Error handling (pcall style or try/catch)
+  - ( ) Optional properties
   - ( ) Type validation util
   - ( ) Allow list operations on string
-  - ( ) Add source location for Expr type
   - ( ) Stack trace
   - ( ) Cleanup your shitty spec
   - ( ) Shortcircuiting for &&, ||, eq?
@@ -24,6 +25,7 @@
 * Later
   - ( ) Repl
   - ( ) Shell commands
+  - ( ) Optional arguments?
   - ( ) Optimize interpreter perfomance
   - ( ) Socket server mode + socket for commands
   - ( ) UI for sending commands (dmenu-like)
@@ -32,6 +34,7 @@
   - ( ) Parser: Allow string escaping \"
   - ( ) IO interface: read from stdin
   - ( ) Read/Write files
+  - ( ) To js?
 
 * Maybe
   - ( ) JIT

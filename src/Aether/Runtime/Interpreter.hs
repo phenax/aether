@@ -130,7 +130,7 @@ builtinDefmacroE (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
   pure ValNil
   where
     argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "do" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "progn" : bodyE)
 builtinDefmacroE _ = do throwError $ TypeError "Invalid call to defmacro"
 
 builtinDoE :: [Expr] -> Evaluator m EvalValue

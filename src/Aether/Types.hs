@@ -27,8 +27,8 @@ data Expr
 
 data EvalValue
   = ValBool !Bool
-  | ValLambda !Stack ![String] !Expr
-  | ValMacro !Stack ![String] !Expr
+  | ValLambda !Stack ![Name] !Expr
+  | ValMacro !Stack ![Name] !Expr
   | ValBuiltin Name
   | ValNil
   | ValNumber !Double
@@ -43,7 +43,7 @@ data EvalError
   | UnknownError String
   deriving (Show, Eq)
 
-data Scope = Scope {scopeId :: !ScopeId, scopeTable :: !(Map.Map String EvalValue)}
+data Scope = Scope {scopeId :: !ScopeId, scopeTable :: !(Map.Map Name EvalValue)}
   deriving (Show, Eq)
 
 instance Semigroup Scope where
