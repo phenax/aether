@@ -3,10 +3,25 @@
 (define (const x) (-> [_] x))
 (define (not a) (a #F #T))
 (define (apply fn args) (eval '(,fn ,@args)))
+(set = eq?)
+(set < lt?)
+(set > gt?)
+(set <= lte?)
+(set >= gte?)
 
 ; Function
 (define (curry fn x) (-> [y] (fn x y)))
+(set _^ curry)
+(define (^_ fn x) (-> [y] (fn y x)))
 (define (flip fn) (-> [x y] (fn y x)))
+
+;; Example:
+;;   (|> 5 (^_ * 5) (^_ + 2))
+;;
+;; Example with infix:
+;;   ($ 5
+;;     |> (^_ * 5)
+;;     |> (^_ + 2))
 (define (|> val ... fns) (fold (-> [v fn] (fn v)) val fns))
 
 ; Numbers

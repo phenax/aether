@@ -209,9 +209,9 @@ test = do
       evalExpr
         [i|
           ($ 2 * ($ 5 + 2))
-          <$ 5 + <$ 9 - 3> * 2>
+          ($ ($ 9 - 3) * 2)
         |]
-        `shouldReturn` Right [ValNumber 14, ValNumber 22]
+        `shouldReturn` Right [ValNumber 14, ValNumber 12]
 
   describe "core > range" $ do
     it "generates a range of numbers" $ do

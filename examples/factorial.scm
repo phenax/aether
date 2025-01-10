@@ -4,4 +4,4 @@
     (* num (factorial (- num 1)))))
 
 (for (range 0 10) (-> [n]
-  (displayNl (list n (factorial n)))))
+  (displayNl (cons n (factorial n)))))

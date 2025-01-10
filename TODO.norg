@@ -11,7 +11,7 @@
   - (x) Tests for defmacro
   - (x) Macro for infix operators
   - (x) Generate "primitive lambda" for builtins on symbol lookup
-  - (x) IO interface: display, displayNl
+  - (x) IO: display, displayNl
   - (x) Struct/Record
   - ( ) Add source location for Expr type
   - ( ) Error handling (pcall style or try/catch)
@@ -23,8 +23,12 @@
   - ( ) Shortcircuiting for &&, ||, eq?
 
 * Later
+  - ( ) `%`, `even?`, `odd?`
+  - ( ) string concat `str`,
+  - ( ) `(assoc obj ':name "value")`, 
   - ( ) Repl
   - ( ) Shell commands
+  - ( ) require other modules
   - ( ) Optional arguments?
   - ( ) Optimize interpreter perfomance
   - ( ) Socket server mode + socket for commands

@@ -55,12 +55,11 @@ instance Parsable Expr where
 
       literalP = ExprLiteral <$> parse
 
-      symExprP = ExprSymList <$> (parens contents <|> brackets contents <|> angles contents <|> braces contents)
+      symExprP = ExprSymList <$> (parens contents <|> brackets contents <|> braces contents)
         where
           contents = P.sepBy parse spaceConsumer
           parens = P.between (P.char '(') (P.char ')')
           brackets = P.between (P.char '[') (P.char ']')
-          angles = P.between (P.char '<') (P.char '>')
           braces = P.between (P.char '{') (P.char '}')
 
       quotedP = ExprQuoted <$> (P.char '\'' >> parse)
@@ -70,7 +69,7 @@ instance Parsable Expr where
       symbolP = ExprSymbol <$> ((:) <$> identStartChar <*> P.many identChar)
         where
           validIdentSpecialChars = ":-_+=|?!@$%^&*/\\~.'#<>"
-          invalidStartChars = "'#<>@"
+          invalidStartChars = "'#@"
           identStartChar = P.satisfy $ \c -> isAlpha c || c `elem` (validIdentSpecialChars \\ invalidStartChars)
           identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` (validIdentSpecialChars :: String)
 

@@ -127,14 +127,11 @@ test = do
         "()" `shouldParse` ExprSymList []
         "[]" `shouldParse` ExprSymList []
         "{}" `shouldParse` ExprSymList []
-        "<>" `shouldParse` ExprSymList []
         "(#nil #T #F)"
           `shouldParse` ExprSymList [ExprLiteral LitNil, ExprLiteral $ LitBool True, ExprLiteral $ LitBool False]
         "[#nil #T #F]"
           `shouldParse` ExprSymList [ExprLiteral LitNil, ExprLiteral $ LitBool True, ExprLiteral $ LitBool False]
         "{#nil #T #F}"
-          `shouldParse` ExprSymList [ExprLiteral LitNil, ExprLiteral $ LitBool True, ExprLiteral $ LitBool False]
-        "<#nil #T #F>"
           `shouldParse` ExprSymList [ExprLiteral LitNil, ExprLiteral $ LitBool True, ExprLiteral $ LitBool False]
         [i|(    #nil    42    "hello"  nice   #F   )|]
           `shouldParse` ExprSymList
@@ -157,7 +154,7 @@ test = do
                 ]
             ]
 
-        [i|(#nil <foobar? [#nil hello.world "hello world"] #F>)|]
+        [i|(#nil (foobar? [#nil hello.world "hello world"] #F))|]
           `shouldParse` ExprSymList
             [ ExprLiteral LitNil,
               ExprSymList
@@ -173,7 +170,7 @@ test = do
             "hello"
             (str+ "foo" "bar"))
 
-        <runstuff '[2 45 2 3] { (foo 2) }>
+        (runstuff '[2 45 2 3] { (foo 2) })
       |]
         `shouldParse` [ ExprSymList
                           [ ExprSymbol "if",

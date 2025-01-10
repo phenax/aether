@@ -51,13 +51,25 @@ test = do
         evalExpr
           [i|
             (lt? 2 5) (lt? 5 2)
+            (< 2 5) (< 5 2)
             (gt? 200 8) (gt? 8 200)
+            (> 200 8) (> 8 200)
             (lte? 5 5) (lte? 5 2)
+            (<= 5 5) (<= 5 2)
             (gte? 8 8) (gte? 8 200)
+            (>= 8 8) (>= 8 200)
             (eq? 8 8 8 8 8) (eq? 8 8 5 8 8)
           |]
           `shouldReturn` Right
             [ ValBool True,
+              ValBool False,
+              ValBool True,
+              ValBool False,
+              ValBool True,
+              ValBool False,
+              ValBool True,
+              ValBool False,
+              ValBool True,
               ValBool False,
               ValBool True,
               ValBool False,
@@ -292,7 +304,7 @@ test = do
         evalExpr
           [i|
             (define (factorial n)
-              (if (lte? n 1)
+              (if (<= n 1)
                   1
                   (* n (factorial (- n 1)))))
 
