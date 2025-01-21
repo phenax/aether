@@ -44,7 +44,7 @@ builtins =
         ("||", operateOnExprs (ValBool . any valToBool)),
         ("type", builtinTypeOf),
         ("display", builtinDisplay),
-        ("displayNl", builtinDisplay . (++ [ExprLiteral $ LitString "\n"]))
+        ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"]))
       ]
 
 builtinDisplay :: [Expr] -> Evaluator m EvalValue
@@ -62,75 +62,75 @@ interpretLiteral = \case
 
 interpretExpression :: Expr -> Evaluator m EvalValue
 interpretExpression = \case
-  ExprLiteral lit -> interpretLiteral lit
-  ExprSymbol sym -> do
+  ExprLiteral _ lit -> interpretLiteral lit
+  ExprSymbol _ sym -> do
     isBuiltin <- Map.member sym <$> builtins
     let fallback
           | isBuiltin = pure $ ValBuiltin sym
           | otherwise = throwError $ NameNotFound sym
     gets (lookupSymbol sym) >>= maybe fallback pure
-  ExprSymList [] -> pure ValNil
-  ExprSymList (fnE : argsE) -> interpretExpression fnE >>= (`evaluateCall` argsE)
-  ExprUnquoted _expr -> undefined -- TODO: either throw error or `interpretExpression expr`
-  ExprSpliced _expr -> undefined -- same interpretExpression expr
+  ExprSymList _ [] -> pure ValNil
+  ExprSymList _ (fnE : argsE) -> interpretExpression fnE >>= (`evaluateCall` argsE)
+  ExprUnquoted _ _expr -> undefined -- TODO: either throw error or `interpretExpression expr`
+  ExprSpliced _ _expr -> undefined -- same interpretExpression expr
   -- ExprValue (ValQuoted expr) -> interpretExpression expr
   ExprValue value -> pure value
-  ExprQuoted (ExprSymList []) -> pure ValNil
-  ExprQuoted quote -> ValQuoted <$> evalUnquotes quote
+  ExprQuoted _ (ExprSymList _ []) -> pure ValNil
+  ExprQuoted _ quote -> ValQuoted <$> evalUnquotes quote
     where
       evalUnquotes :: Expr -> Evaluator m Expr
-      evalUnquotes (ExprUnquoted expr) = ExprValue <$> interpretExpression expr
-      evalUnquotes (ExprSymList exprs) = ExprSymList <$> (mapM evalUnquotes exprs >>= evalSplices)
+      evalUnquotes (ExprUnquoted _ expr) = ExprValue <$> interpretExpression expr
+      evalUnquotes (ExprSymList _ exprs) = ExprSymList NullSpan <$> (mapM evalUnquotes exprs >>= evalSplices)
       evalUnquotes expr = pure expr
 
       evalSplices :: [Expr] -> Evaluator m [Expr]
       evalSplices [] = pure []
-      evalSplices (ExprSpliced expr : exprs) = do
+      evalSplices (ExprSpliced _ expr : exprs) = do
         val <- interpretExpression expr
         spliced <- evalSplices exprs
         (++ spliced) <$> expandSymList val
       evalSplices (expr : exprs) = (expr :) <$> evalSplices exprs
 
       expandSymList :: EvalValue -> Evaluator m [Expr]
-      expandSymList (ValQuoted (ExprSymList exprs)) = pure exprs
-      expandSymList (ValQuoted (ExprQuoted (ExprSymList exprs))) = pure exprs
-      expandSymList (ValQuoted sym@(ExprSymbol _)) = interpretExpression sym >>= expandSymList
+      expandSymList (ValQuoted (ExprSymList _ exprs)) = pure exprs
+      expandSymList (ValQuoted (ExprQuoted _ (ExprSymList _ exprs))) = pure exprs
+      expandSymList (ValQuoted sym@(ExprSymbol _ _)) = interpretExpression sym >>= expandSymList
       expandSymList e = pure [ExprValue e]
 
 builtinSetE :: [Expr] -> Evaluator m EvalValue
-builtinSetE [ExprSymbol name, valueE] = do
+builtinSetE [ExprSymbol _ name, valueE] = do
   !value <- interpretExpression valueE
   modify' $ defineInCurrentScope name value
   pure ValNil
 builtinSetE args = do throwError $ TypeError $ "Invalid call to set: " ++ show args
 
 builtinLambdaE :: [Expr] -> Evaluator m EvalValue
-builtinLambdaE (ExprSymList argsE : bodyE) = do
+builtinLambdaE (ExprSymList sourceSpan argsE : bodyE) = do
   stack <- gets envCallStack
-  pure $ ValLambda stack argLabels body
+  pure $ ValLambda stack sourceSpan argLabels body
   where
     argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "progn" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList NullSpan (ExprSymbol NullSpan "progn" : bodyE)
 builtinLambdaE _ = do throwError $ TypeError "Invalid call to ->"
 
 builtinDefineE :: [Expr] -> Evaluator m EvalValue
-builtinDefineE (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
+builtinDefineE (ExprSymList sourceSpan (ExprSymbol _ name : argsE) : bodyE) = do
   stack <- gets envCallStack
-  modify' $ defineInCurrentScope name (ValLambda stack argLabels body)
+  modify' $ defineInCurrentScope name (ValLambda stack sourceSpan argLabels body)
   pure ValNil
   where
     argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "progn" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList NullSpan (ExprSymbol NullSpan "progn" : bodyE)
 builtinDefineE _ = do throwError $ TypeError "Invalid call to define"
 
 builtinDefmacroE :: [Expr] -> Evaluator m EvalValue
-builtinDefmacroE (ExprSymList (ExprSymbol name : argsE) : bodyE) = do
+builtinDefmacroE (ExprSymList sourceSpan (ExprSymbol _ name : argsE) : bodyE) = do
   stack <- gets envCallStack
-  modify' (defineInCurrentScope name $ ValMacro stack argLabels body)
+  modify' (defineInCurrentScope name $ ValMacro stack sourceSpan argLabels body)
   pure ValNil
   where
     argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList (ExprSymbol "progn" : bodyE)
+    body = if length bodyE == 1 then head bodyE else ExprSymList NullSpan (ExprSymbol NullSpan "progn" : bodyE)
 builtinDefmacroE _ = do throwError $ TypeError "Invalid call to defmacro"
 
 builtinDoE :: [Expr] -> Evaluator m EvalValue
@@ -162,8 +162,8 @@ builtinCarE :: [Expr] -> Evaluator m EvalValue
 builtinCarE [expr] = do
   res <- interpretExpression expr
   case res of
-    ValQuoted (ExprSymList (first : _)) -> interpretExpression first
-    ValQuoted (ExprSymList []) -> pure ValNil
+    ValQuoted (ExprSymList _ (first : _)) -> interpretExpression first
+    ValQuoted (ExprSymList _ []) -> pure ValNil
     ValQuoted quote -> interpretExpression quote
     _ -> pure res
 builtinCarE _ = do throwError $ TypeError "Invalid number of arguments sent to car"
@@ -172,9 +172,9 @@ builtinCdrE :: [Expr] -> Evaluator m EvalValue
 builtinCdrE [expr] = do
   res <- interpretExpression expr
   case res of
-    ValQuoted (ExprSymList [_]) -> pure ValNil
-    ValQuoted (ExprSymList (_ : rest)) ->
-      ValQuoted . ExprSymList . fmap ExprValue <$> mapM interpretExpression rest
+    ValQuoted (ExprSymList _ [_]) -> pure ValNil
+    ValQuoted (ExprSymList _ (_ : rest)) ->
+      ValQuoted . ExprSymList NullSpan . fmap ExprValue <$> mapM interpretExpression rest
     _ -> pure ValNil
 builtinCdrE _ = do throwError $ TypeError "Invalid number of arguments sent to cdr"
 
@@ -183,11 +183,11 @@ builtinConsE [itemE, restE] = do
   item <- interpretExpression itemE
   rest <- interpretExpression restE
   case rest of
-    ValQuoted (ExprSymList values) -> pure $ ValQuoted (ExprSymList (ExprValue item : values))
-    ValNil -> pure $ ValQuoted (ExprSymList [ExprValue item])
-    ValQuoted (ExprLiteral LitNil) -> pure $ ValQuoted (ExprSymList [ExprValue item])
-    ValQuoted (ExprValue ValNil) -> pure $ ValQuoted (ExprSymList [ExprValue item])
-    _ -> pure $ ValQuoted (ExprSymList [ExprValue item, ExprValue rest])
+    ValQuoted (ExprSymList _ values) -> pure $ ValQuoted (ExprSymList NullSpan (ExprValue item : values))
+    ValNil -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item])
+    ValQuoted (ExprLiteral _ LitNil) -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item])
+    ValQuoted (ExprValue ValNil) -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item])
+    _ -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item, ExprValue rest])
 builtinConsE _ = do throwError $ TypeError "Invalid number of arguments sent to cons"
 
 builtinLessThan :: [Expr] -> Evaluator m EvalValue
@@ -207,7 +207,7 @@ builtinGreaterThanOrEqualTo [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a >=
 builtinGreaterThanOrEqualTo _ = throwError $ TypeError "Invalid number of arguments for gte?"
 
 builtinTypeOf :: [Expr] -> Evaluator m EvalValue
-builtinTypeOf [expr] = ValQuoted . ExprSymbol . typeOfValue <$> interpretExpression expr
+builtinTypeOf [expr] = ValQuoted . ExprSymbol NullSpan . typeOfValue <$> interpretExpression expr
 builtinTypeOf _ = throwError $ TypeError "Invalid number of arguments for type"
 
 numberBinaryOp :: (Double -> Double -> EvalValue) -> Expr -> Expr -> Evaluator m EvalValue
@@ -221,14 +221,14 @@ operateOnExprs fn exprs = fn <$> mapM interpretExpression exprs
 
 evaluateCall :: EvalValue -> [Expr] -> Evaluator m EvalValue
 -- Lambda
-evaluateCall (ValLambda (Stack stack) labels body) argsE = do
+evaluateCall (ValLambda (Stack stack) _ labels body) argsE = do
   args <- mapM interpretExpression argsE
   argsScope <- argsToScope labels args
   closure (Stack $ argsScope : stack) $ interpretExpression body
 
 -- Macros
 -- TODO: Figure out how to lexically scope macros
-evaluateCall (ValMacro (Stack _defnstack) labels body) argsE = do
+evaluateCall (ValMacro (Stack _defnstack) _ labels body) argsE = do
   (Stack callerstack) <- gets envCallStack
   !args <- mapM interpretMacroArgs argsE
   !argsScope <- argsToScope labels args
@@ -238,15 +238,15 @@ evaluateCall (ValMacro (Stack _defnstack) labels body) argsE = do
     _ -> pure result
   where
     interpretMacroArgs :: Expr -> Evaluator m EvalValue
-    interpretMacroArgs (ExprLiteral lit) = interpretLiteral lit
+    interpretMacroArgs (ExprLiteral _ lit) = interpretLiteral lit
     interpretMacroArgs (ExprValue v) = pure v
-    interpretMacroArgs (ExprQuoted quote) = pure $ ValQuoted quote
-    interpretMacroArgs (ExprSymList exprs) = ValQuoted . ExprSymList . fmap ExprValue <$> mapM interpretMacroArgs exprs
+    interpretMacroArgs (ExprQuoted _ quote) = pure $ ValQuoted quote
+    interpretMacroArgs (ExprSymList _ exprs) = ValQuoted . ExprSymList NullSpan . fmap ExprValue <$> mapM interpretMacroArgs exprs
     interpretMacroArgs val = pure $ ValQuoted val
 
     unwrapQuotes :: Expr -> Expr
-    unwrapQuotes (ExprSymList exprs) = ExprSymList $ map unwrapQuotes exprs
-    unwrapQuotes (ExprValue (ValQuoted (ExprSymList exprs))) = ExprSymList $ map unwrapQuotes exprs
+    unwrapQuotes (ExprSymList _ exprs) = ExprSymList NullSpan $ map unwrapQuotes exprs
+    unwrapQuotes (ExprValue (ValQuoted (ExprSymList _ exprs))) = ExprSymList NullSpan $ map unwrapQuotes exprs
     unwrapQuotes (ExprValue (ValQuoted e)) = e
     unwrapQuotes e = e
 

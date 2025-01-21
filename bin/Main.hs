@@ -42,4 +42,6 @@ instance Default Configuration where
 
 parseArgs :: [String] -> Configuration -> Configuration
 parseArgs ("-f" : file : _) config = config {configScriptFile = Just file}
+parseArgs ("-h" : _) config = config {configHelp = True}
+parseArgs ("--help" : _) config = config {configHelp = True}
 parseArgs _ config = config

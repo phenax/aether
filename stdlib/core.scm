@@ -17,6 +17,9 @@
 
 ;; Example:
 ;;   (|> 5 (^_ * 5) (^_ + 2))
+;;   (|> list
+;;       (curry filter positive?)
+;;       (curry map math/sqrt))
 ;;
 ;; Example with infix:
 ;;   ($ 5
@@ -68,6 +71,7 @@
 ;; Infix operator notation. (Always evaluates left to right)
 ;; Example:
 ;;    ($ 5 + ($ 2 * 2) * 3 - 1)
+;; Equivalent to: (- (* (+ 5 (* 2 2)) 3) 1)
 (defmacro ($ start ... args)
   (define (infix-in args value)
     (if (empty? args)
@@ -77,7 +81,7 @@
   (infix-in args start))
 
 ;; Create a record
-;; Example: 
+;; Example:
 ;;   (record Person
 ;;     :name
 ;;     :age

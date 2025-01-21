@@ -63,7 +63,7 @@ test = do
           (reverse '[])
         |]
         `shouldReturn` Right
-          [ ValQuoted (ExprSymList [ExprValue (ValNumber 3), ExprValue (ValNumber 2), ExprValue (ValNumber 1)]),
+          [ ValQuoted (ExprSymList NullSpan [ExprValue (ValNumber 3), ExprValue (ValNumber 2), ExprValue (ValNumber 1)]),
             ValNil
           ]
 
@@ -75,7 +75,7 @@ test = do
           (map (-> [x] x) '[])
         |]
         `shouldReturn` Right
-          [ ValQuoted (ExprSymList [ExprValue (ValNumber 2), ExprValue (ValNumber 4), ExprValue (ValNumber 6)]),
+          [ ValQuoted (ExprSymList NullSpan [ExprValue (ValNumber 2), ExprValue (ValNumber 4), ExprValue (ValNumber 6)]),
             ValNil
           ]
 
@@ -99,6 +99,7 @@ test = do
         `shouldReturn` Right
           [ ValQuoted
               ( ExprSymList
+                  NullSpan
                   [ ExprValue (ValNumber 1),
                     ExprValue (ValNumber 2),
                     ExprValue (ValNumber 3),
@@ -107,7 +108,7 @@ test = do
                     ExprValue (ValNumber 6)
                   ]
               ),
-            ValQuoted $ ExprSymList []
+            ValQuoted $ ExprSymList NullSpan []
           ]
 
   describe "core > concat" $ do
@@ -121,6 +122,7 @@ test = do
         `shouldReturn` Right
           [ ValQuoted $
               ExprSymList
+                NullSpan
                 [ ExprValue (ValNumber 1),
                   ExprValue (ValNumber 2),
                   ExprValue (ValNumber 3),
@@ -130,12 +132,14 @@ test = do
                 ],
             ValQuoted $
               ExprSymList
+                NullSpan
                 [ ExprValue (ValNumber 4),
                   ExprValue (ValNumber 5),
                   ExprValue (ValNumber 6)
                 ],
             ValQuoted $
               ExprSymList
+                NullSpan
                 [ ExprValue (ValNumber 1),
                   ExprValue (ValNumber 2),
                   ExprValue (ValNumber 3)
@@ -224,6 +228,7 @@ test = do
         `shouldReturn` Right
           [ ValQuoted $
               ExprSymList
+                NullSpan
                 [ ExprValue (ValNumber 2),
                   ExprValue (ValNumber 3),
                   ExprValue (ValNumber 4),
@@ -231,6 +236,7 @@ test = do
                 ],
             ValQuoted $
               ExprSymList
+                NullSpan
                 [ ExprValue (ValNumber (-2)),
                   ExprValue (ValNumber (-1)),
                   ExprValue (ValNumber 0),
@@ -238,7 +244,7 @@ test = do
                   ExprValue (ValNumber 2),
                   ExprValue (ValNumber 3)
                 ],
-            ValQuoted $ ExprSymList [ExprValue (ValNumber 5)]
+            ValQuoted $ ExprSymList NullSpan [ExprValue (ValNumber 5)]
           ]
 
     context "when start is greater than end" $ do
@@ -267,17 +273,17 @@ test = do
           (type if)
         |]
         `shouldReturn` Right
-          [ ValQuoted (ExprSymbol "list"),
-            ValQuoted (ExprSymbol "list"),
-            ValQuoted (ExprSymbol "number"),
-            ValQuoted (ExprSymbol "string"),
-            ValQuoted (ExprSymbol "symbol"),
-            ValQuoted (ExprSymbol "quote"),
-            ValQuoted (ExprSymbol "boolean"),
-            ValQuoted (ExprSymbol "list"),
-            ValQuoted (ExprSymbol "function"),
-            ValQuoted (ExprSymbol "function"),
-            ValQuoted (ExprSymbol "macro")
+          [ ValQuoted (ExprSymbol NullSpan "list"),
+            ValQuoted (ExprSymbol NullSpan "list"),
+            ValQuoted (ExprSymbol NullSpan "number"),
+            ValQuoted (ExprSymbol NullSpan "string"),
+            ValQuoted (ExprSymbol NullSpan "symbol"),
+            ValQuoted (ExprSymbol NullSpan "quote"),
+            ValQuoted (ExprSymbol NullSpan "boolean"),
+            ValQuoted (ExprSymbol NullSpan "list"),
+            ValQuoted (ExprSymbol NullSpan "function"),
+            ValQuoted (ExprSymbol NullSpan "function"),
+            ValQuoted (ExprSymbol NullSpan "macro")
           ]
 
   describe "core > record" $ do
@@ -297,7 +303,7 @@ test = do
           [ ValNil,
             ValNil,
             ValString "John",
-            ValQuoted $ ExprSymbol "male",
+            ValQuoted $ ExprSymbol NullSpan "male",
             ValNumber 25
           ]
 
@@ -336,9 +342,10 @@ test = do
         `shouldReturn` Right
           [ ValQuoted $
               ExprSymList
-                [ ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
-                  ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5],
-                  ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 3, ExprValue $ ValNumber 6]
+                NullSpan
+                [ ExprValue $ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
+                  ExprValue $ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5],
+                  ExprValue $ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 3, ExprValue $ ValNumber 6]
                 ]
           ]
 
@@ -352,13 +359,15 @@ test = do
           `shouldReturn` Right
             [ ValQuoted $
                 ExprSymList
-                  [ ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
-                    ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5]
+                  NullSpan
+                  [ ExprValue $ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
+                    ExprValue $ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5]
                   ],
               ValQuoted $
                 ExprSymList
-                  [ ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
-                    ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5]
+                  NullSpan
+                  [ ExprValue $ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 4],
+                    ExprValue $ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 2, ExprValue $ ValNumber 5]
                   ]
             ]
 
@@ -379,14 +388,14 @@ test = do
           [i| (index-of 182 (list 1 1 2 3 5 8 13 21)) |]
           `shouldReturn` Right [ValNil]
 
-  describe "core > contains" $ do
+  describe "core > contains?" $ do
     it "returns the index of given item" $ do
       evalExpr
         [i|
           (set ls (list 1 1 2 3 5 8 13 21))
-          (contains 8 ls)
-          (contains 1 ls)
-          (contains 99 ls)
+          (contains? 8 ls)
+          (contains? 1 ls)
+          (contains? 99 ls)
         |]
         `shouldReturn` Right [ValNil, ValBool True, ValBool True, ValBool False]
 

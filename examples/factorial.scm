@@ -1,6 +1,6 @@
 
 (define (factorial num)
-  (if (lte? num 1) 1
+  (if (<= num 1) 1
     (* num (factorial (- num 1)))))
 
 (for (range 0 10) (-> [n]

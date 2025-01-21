@@ -35,5 +35,5 @@ standardLib =
                Left e -> error $ errorBundlePretty e
            libFiles = ["./stdlib/core.scm", "./stdlib/list.scm"]
 
-       foldM loadCodeInEnv mempty libFiles >>= lift
+       foldM loadCodeInEnv [] libFiles >>= lift
    )

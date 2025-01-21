@@ -8,6 +8,7 @@ import Data.List ((\\))
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Void (Void)
+import Text.Megaparsec (getSourcePos)
 import qualified Text.Megaparsec as P
 import qualified Text.Megaparsec.Char as P
 import qualified Text.Megaparsec.Char.Lexer as L
@@ -46,32 +47,38 @@ instance Parsable Literal where
         LitString <$> do
           P.between (P.char '"') (P.char '"') $ P.many (P.satisfy (/= '"'))
 
+parseWithSpan :: Parser a -> Parser (SourceSpan, a)
+parseWithSpan parser = do
+  spaceConsumer
+  (start, result, end) <-
+    (,,) <$> getSourcePos <*> parser <*> getSourcePos
+  spaceConsumer
+  pure (SourceSpan start end, result)
+
 instance Parsable Expr where
   parse =
-    wrappedSpaces
-      (quotedP <|> splicedP <|> unQuotedP <|> literalP <|> symExprP <|> symbolP)
+    spaceConsumer >> (quotedP <|> splicedP <|> unQuotedP <|> literalP <|> symExprP <|> symbolP) <* spaceConsumer
     where
-      wrappedSpaces p = spaceConsumer >> p <* spaceConsumer
+      literalP = uncurry ExprLiteral <$> parseWithSpan parse
 
-      literalP = ExprLiteral <$> parse
-
-      symExprP = ExprSymList <$> (parens contents <|> brackets contents <|> braces contents)
+      symExprP = uncurry ExprSymList <$> (parens contents <|> brackets contents <|> braces contents)
         where
-          contents = P.sepBy parse spaceConsumer
+          contents :: Parser (SourceSpan, [Expr])
+          contents = parseWithSpan $ P.sepBy parse spaceConsumer
           parens = P.between (P.char '(') (P.char ')')
           brackets = P.between (P.char '[') (P.char ']')
           braces = P.between (P.char '{') (P.char '}')
 
-      quotedP = ExprQuoted <$> (P.char '\'' >> parse)
-      unQuotedP = ExprUnquoted <$> (P.char ',' >> parse)
-      splicedP = ExprSpliced <$> (P.string ",@" >> parse)
+      quotedP = uncurry ExprQuoted <$> parseWithSpan (P.char '\'' >> parse)
+      unQuotedP = uncurry ExprUnquoted <$> parseWithSpan (P.char ',' >> parse)
+      splicedP = uncurry ExprSpliced <$> parseWithSpan (P.string ",@" >> parse)
 
-      symbolP = ExprSymbol <$> ((:) <$> identStartChar <*> P.many identChar)
+      symbolP = uncurry ExprSymbol <$> parseWithSpan ((:) <$> identStartChar <*> P.many identChar)
         where
-          validIdentSpecialChars = ":-_+=|?!@$%^&*/\\~.'#<>"
-          invalidStartChars = "'#@"
+          validIdentSpecialChars = ":-_+=|?!@$%^&*/\\~.'#<>" :: [Char]
+          invalidStartChars = "'#@" :: [Char]
           identStartChar = P.satisfy $ \c -> isAlpha c || c `elem` (validIdentSpecialChars \\ invalidStartChars)
-          identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` (validIdentSpecialChars :: String)
+          identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` validIdentSpecialChars
 
 instance Parsable [Expr] where
   parse = P.manyTill parse P.eof

@@ -6,8 +6,8 @@ valToNumber :: EvalValue -> Double
 valToNumber (ValNumber num) = num
 valToNumber (ValString num) = read num
 valToNumber (ValBool True) = 1
-valToNumber (ValQuoted (ExprLiteral (LitNumber n))) = n
-valToNumber (ValQuoted (ExprLiteral (LitString str))) = read str
+valToNumber (ValQuoted (ExprLiteral _ (LitNumber n))) = n
+valToNumber (ValQuoted (ExprLiteral _ (LitString str))) = read str
 valToNumber _ = 0
 
 valToBool :: EvalValue -> Bool
@@ -24,13 +24,13 @@ checkIfEqual (ValNumber v1) (ValNumber v2) = v1 == v2
 checkIfEqual (ValString v1) (ValString v2) = v1 == v2
 checkIfEqual (ValBool v1) (ValBool v2) = v1 == v2
 checkIfEqual ValNil ValNil = True
-checkIfEqual (ValQuoted (ExprSymList [])) ValNil = True
-checkIfEqual ValNil (ValQuoted (ExprSymList [])) = True
-checkIfEqual (ValQuoted (ExprSymbol v1)) (ValQuoted (ExprSymbol v2)) = v1 == v2
+checkIfEqual (ValQuoted (ExprSymList _ [])) ValNil = True
+checkIfEqual ValNil (ValQuoted (ExprSymList _ [])) = True
+checkIfEqual (ValQuoted (ExprSymbol _ v1)) (ValQuoted (ExprSymbol _ v2)) = v1 == v2
 checkIfEqual _ _ = False
 
 argToLabel :: Expr -> Name
-argToLabel (ExprSymbol sym) = sym
+argToLabel (ExprSymbol _ sym) = sym
 argToLabel _ = "_"
 
 typeOfValue :: EvalValue -> String
@@ -39,8 +39,8 @@ typeOfValue (ValBuiltin _) = "function"
 typeOfValue (ValLambda {}) = "function"
 typeOfValue (ValMacro {}) = "macro"
 typeOfValue (ValNumber _) = "number"
-typeOfValue (ValQuoted (ExprSymList _)) = "list"
-typeOfValue (ValQuoted (ExprSymbol _)) = "symbol"
+typeOfValue (ValQuoted (ExprSymList _ _)) = "list"
+typeOfValue (ValQuoted (ExprSymbol _ _)) = "symbol"
 typeOfValue (ValQuoted _) = "quote"
 typeOfValue (ValString _) = "string"
 typeOfValue ValNil = "list"
@@ -50,19 +50,19 @@ showEvalValue ValNil = "#nil"
 showEvalValue (ValBool bool) = if bool then "#T" else "#F"
 showEvalValue (ValString str) = str
 showEvalValue (ValNumber n) = show n
-showEvalValue (ValLambda _ args body) = "(-> [" ++ unwords args ++ "]" ++ showExpr body ++ ")"
+showEvalValue (ValLambda _ _ args body) = "(-> [" ++ unwords args ++ "]" ++ showExpr body ++ ")"
 showEvalValue (ValQuoted expr) = '\'' : showExpr expr
 showEvalValue (ValMacro {}) = "<macro>"
 showEvalValue (ValBuiltin s) = "<builtin: " ++ s ++ ">"
 
 showExpr :: Expr -> String
-showExpr (ExprLiteral (LitString s)) = s
-showExpr (ExprLiteral (LitNumber n)) = showEvalValue $ ValNumber n
-showExpr (ExprLiteral (LitBool b)) = showEvalValue $ ValBool b
-showExpr (ExprLiteral LitNil) = showEvalValue ValNil
-showExpr (ExprSymList ls) = "(" ++ unwords (map showExpr ls) ++ ")"
-showExpr (ExprQuoted quote) = '\'' : showExpr quote
-showExpr (ExprSpliced expr) = ",@" ++ showExpr expr
-showExpr (ExprUnquoted expr) = ',' : showExpr expr
-showExpr (ExprSymbol s) = "<symbol: " ++ s ++ ">"
+showExpr (ExprLiteral _ (LitString s)) = s
+showExpr (ExprLiteral _ (LitNumber n)) = showEvalValue $ ValNumber n
+showExpr (ExprLiteral _ (LitBool b)) = showEvalValue $ ValBool b
+showExpr (ExprLiteral _ LitNil) = showEvalValue ValNil
+showExpr (ExprSymList _ ls) = "(" ++ unwords (map showExpr ls) ++ ")"
+showExpr (ExprQuoted _ quote) = '\'' : showExpr quote
+showExpr (ExprSpliced _ expr) = ",@" ++ showExpr expr
+showExpr (ExprUnquoted _ expr) = ',' : showExpr expr
+showExpr (ExprSymbol _ s) = "<symbol: " ++ s ++ ">"
 showExpr (ExprValue v) = showEvalValue v

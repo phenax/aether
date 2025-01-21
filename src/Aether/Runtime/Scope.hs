@@ -38,7 +38,7 @@ closure (Stack {stack}) eval = do
 
 zipArgs :: [Name] -> [EvalValue] -> Maybe [(Name, EvalValue)]
 zipArgs [] [] = pure []
-zipArgs ["...", label] rest = pure [(label, ValQuoted . ExprSymList . fmap ExprValue $ rest)]
+zipArgs ["...", label] rest = pure [(label, ValQuoted . ExprSymList NullSpan . fmap ExprValue $ rest)]
 zipArgs (label : labels) (arg : args) = ((label, arg) :) <$> zipArgs labels args
 zipArgs _ _ = Nothing
 

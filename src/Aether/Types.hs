@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Aether.Types where
 
 import Control.Monad.Except (MonadError)
@@ -5,8 +7,20 @@ import Control.Monad.RWS.Strict (MonadIO (liftIO), MonadState)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Language.Haskell.TH.Lift (deriveLiftMany)
+import Text.Megaparsec (Pos, SourcePos)
 
 type Name = String
+
+data SourceSpan = SourceSpan SourcePos SourcePos | NoSourceSpan | NullSpan
+  deriving (Show)
+
+-- NOTE: Temporary to not worry about tests
+instance Eq SourceSpan where
+  (==) NullSpan _ = True
+  (==) _ NullSpan = True
+  (==) NoSourceSpan NoSourceSpan = True
+  (==) (SourceSpan a b) (SourceSpan c d) = a == b && c == d
+  (==) _ _ = False
 
 data Literal
   = LitBool !Bool
@@ -16,19 +30,19 @@ data Literal
   deriving (Show, Eq)
 
 data Expr
-  = ExprLiteral !Literal
-  | ExprQuoted !Expr
-  | ExprSymList ![Expr]
-  | ExprSymbol !Name
-  | ExprUnquoted !Expr
-  | ExprSpliced !Expr
+  = ExprLiteral !SourceSpan !Literal
+  | ExprQuoted !SourceSpan !Expr
+  | ExprSymList !SourceSpan ![Expr]
+  | ExprSymbol !SourceSpan !Name
+  | ExprUnquoted !SourceSpan !Expr
+  | ExprSpliced !SourceSpan !Expr
   | ExprValue !EvalValue
   deriving (Show, Eq)
 
 data EvalValue
   = ValBool !Bool
-  | ValLambda !Stack ![Name] !Expr
-  | ValMacro !Stack ![Name] !Expr
+  | ValLambda !Stack !SourceSpan ![Name] !Expr
+  | ValMacro !Stack !SourceSpan ![Name] !Expr
   | ValBuiltin Name
   | ValNil
   | ValNumber !Double
@@ -85,4 +99,4 @@ instance (MonadIO m) => MonadLangIO (LangIOT m) where
 
 type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m a
 
-$(deriveLiftMany [''Literal, ''Expr, ''EvalValue, ''EvalError, ''ScopeId, ''Scope, ''Stack])
+$(deriveLiftMany [''Literal, ''Expr, ''EvalValue, ''EvalError, ''ScopeId, ''Scope, ''Stack, ''SourceSpan, ''SourcePos, ''Pos])

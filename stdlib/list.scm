@@ -74,5 +74,5 @@
       [else                  (index-of-in value (cdr ls) (+ index 1))]))
   (index-of-in value ls 0))
 
-(define (contains value ls) (not (eq? (index-of value ls) #nil)))
+(define (contains? value ls) (not (eq? (index-of value ls) #nil)))
 

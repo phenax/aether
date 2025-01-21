@@ -1,0 +1,61 @@
+* Current
+  - [X] Simple parser
+  - [X] Simple interpreter
+  - [X] Math operations
+  - [X] Simple stdlib
+  - [X] Quasiquotes
+  - [X] Fix lambda scope to be scope of definition and not call site
+  - [X] Var args
+  - [X] List operations
+  - [X] Add distinction between `,` and `,@` for splicing
+  - [X] Tests for defmacro
+  - [X] Macro for infix operators
+  - [X] Generate "primitive lambda" for builtins on symbol lookup
+  - [X] IO: display, displayNl
+  - [X] Struct/Record
+  - [X] Add source location for Expr type
+  - [ ] Error handling (pcall style or try/catch)
+  - [ ] Optional properties
+  - [ ] Type validation util
+  - [ ] Allow list operations on string
+  - [ ] Stack trace
+  - [ ] Cleanup your shitty spec
+  - [ ] Shortcircuiting for &&, ||, eq?
+
+* Later
+  - [ ] `%`, `even?`, `odd?`
+  - [ ] string concat `str`,
+  - [ ] `(assoc obj ':name "value")`, 
+  - [ ] Repl
+  - [ ] Shell commands
+  - [ ] require other modules
+  - [ ] Optional arguments?
+  - [ ] Optimize interpreter perfomance
+  - [ ] Socket server mode + socket for commands
+  - [ ] UI for sending commands (dmenu-like)
+  - [ ] UI repl completion
+  - [ ] UI repl highlighting
+  - [ ] Parser: Allow string escaping \"
+  - [ ] IO interface: read from stdin
+  - [ ] Read/Write files
+  - [ ] To js?
+
+* Maybe
+  - [ ] JIT
+  - [ ] Record and replay keystrokes/mouse events?
+
+* Integration ideas
+  - [ ] UI elements with gtk, qt or sdl
+  - [ ] Quick notes
+  - [ ] Quick bookmarking
+  - [ ] Timer/reminder
+  - [ ] Thunderbird integration
+  - [ ] Notifications integration
+  - [ ] Treesitter based structured file editing?
+  - [ ] HTML generator
+
+* Resources
+- [[https://lispcookbook.github.io/cl-cookbook/error_handling.html]]
+- [[https://github.com/elm/compiler/blob/master/compiler/src/AST/Source.hs]]
+- [[https://github.com/cisco/ChezScheme/tree/main/examples]]
+- [[https://github.com/purescript/purescript/blob/master/src/Language/PureScript/AST/Declarations.hs#L642]]

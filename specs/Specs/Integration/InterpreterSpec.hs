@@ -5,6 +5,7 @@ import Aether.Syntax.Parser
 import Aether.Types
 import Data.String.Interpolate.IsString
 import Test.Hspec
+import TestUtils
 import Text.Megaparsec (errorBundlePretty)
 
 test :: SpecWith ()
@@ -120,6 +121,7 @@ test = do
               [ ValNil,
                 ValQuoted $
                   ExprSymList
+                    dummySpan
                     [ ExprValue $ ValNumber 0,
                       ExprValue $ ValNumber 1,
                       ExprValue $ ValNumber 2,
@@ -138,9 +140,10 @@ test = do
               [ ValNil,
                 ValQuoted $
                   ExprSymList
-                    [ ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 1],
-                      ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 2],
-                      ExprValue $ ValQuoted $ ExprSymList [ExprValue $ ValNumber 3]
+                    dummySpan
+                    [ ExprValue $ ValQuoted $ ExprSymList dummySpan [ExprValue $ ValNumber 1],
+                      ExprValue $ ValQuoted $ ExprSymList dummySpan [ExprValue $ ValNumber 2],
+                      ExprValue $ ValQuoted $ ExprSymList dummySpan [ExprValue $ ValNumber 3]
                     ]
               ]
 
@@ -155,9 +158,10 @@ test = do
             [ ValNil,
               ValQuoted
                 ( ExprSymList
-                    [ ExprSymbol "hello",
+                    dummySpan
+                    [ ExprSymbol dummySpan "hello",
                       ExprValue (ValNumber 23),
-                      ExprSymbol "world",
+                      ExprSymbol dummySpan "world",
                       ExprValue (ValNumber 20)
                     ]
                 )
@@ -177,18 +181,19 @@ test = do
                 ValNil,
                 ValQuoted
                   ( ExprSymList
-                      [ ExprSymbol "hello",
-                        ExprLiteral (LitNumber 1),
-                        ExprLiteral (LitNumber 2),
-                        ExprLiteral (LitNumber 3),
-                        ExprSymbol "world",
+                      dummySpan
+                      [ ExprSymbol dummySpan "hello",
+                        ExprLiteral dummySpan (LitNumber 1),
+                        ExprLiteral dummySpan (LitNumber 2),
+                        ExprLiteral dummySpan (LitNumber 3),
+                        ExprSymbol dummySpan "world",
                         ExprValue $
                           ValQuoted
-                            (ExprSymList [ExprLiteral (LitNumber 1), ExprLiteral (LitNumber 2), ExprLiteral (LitNumber 3)])
+                            (ExprSymList dummySpan [ExprLiteral dummySpan (LitNumber 1), ExprLiteral dummySpan (LitNumber 2), ExprLiteral dummySpan (LitNumber 3)])
                       ]
                   ),
                 ValQuoted
-                  (ExprSymList [ExprSymbol "hello", ExprValue (ValNumber 200), ExprSymbol "world", ExprValue (ValNumber 200)])
+                  (ExprSymList dummySpan [ExprSymbol dummySpan "hello", ExprValue (ValNumber 200), ExprSymbol dummySpan "world", ExprValue (ValNumber 200)])
               ]
 
       context "with nested unquotes" $ do
@@ -204,15 +209,17 @@ test = do
                 ValNil,
                 ValQuoted
                   ( ExprSymList
-                      [ ExprSymbol "hello",
+                      dummySpan
+                      [ ExprSymbol dummySpan "hello",
                         ExprSymList
-                          [ ExprSymbol "+",
+                          dummySpan
+                          [ ExprSymbol dummySpan "+",
                             ExprValue (ValNumber 20),
-                            ExprLiteral (LitNumber 1),
-                            ExprLiteral (LitNumber 2),
-                            ExprLiteral (LitNumber 3)
+                            ExprLiteral dummySpan (LitNumber 1),
+                            ExprLiteral dummySpan (LitNumber 2),
+                            ExprLiteral dummySpan (LitNumber 3)
                           ],
-                        ExprSymbol "world"
+                        ExprSymbol dummySpan "world"
                       ]
                   )
               ]
@@ -240,7 +247,7 @@ test = do
               (cdr '())
             |]
             `shouldReturn` Right
-              [ ValQuoted (ExprSymList [ExprValue (ValNumber 24), ExprValue (ValNumber 899)]),
+              [ ValQuoted (ExprSymList dummySpan [ExprValue (ValNumber 24), ExprValue (ValNumber 899)]),
                 ValNil,
                 ValNil
               ]
@@ -253,11 +260,12 @@ test = do
               (cons (cons 5 #nil) (cons 2 #nil))
             |]
             `shouldReturn` Right
-              [ ValQuoted (ExprSymList [ExprValue $ ValNumber 5.0, ExprValue (ValNumber 2.0)]),
-                ValQuoted (ExprSymList [ExprValue (ValNumber 2.0)]),
+              [ ValQuoted (ExprSymList dummySpan [ExprValue $ ValNumber 5.0, ExprValue (ValNumber 2.0)]),
+                ValQuoted (ExprSymList dummySpan [ExprValue (ValNumber 2.0)]),
                 ValQuoted
                   ( ExprSymList
-                      [ ExprValue $ ValQuoted (ExprSymList [ExprValue $ ValNumber 5.0]),
+                      dummySpan
+                      [ ExprValue $ ValQuoted (ExprSymList dummySpan [ExprValue $ ValNumber 5.0]),
                         ExprValue (ValNumber 2.0)
                       ]
                   )
@@ -285,12 +293,14 @@ test = do
             [ ValNil,
               ValQuoted $
                 ExprSymList
+                  dummySpan
                   [ ExprValue (ValNumber 1),
                     ExprValue (ValNumber 2),
                     ExprValue (ValNumber 3),
                     ExprValue $
                       ValQuoted $
                         ExprSymList
+                          dummySpan
                           [ ExprValue (ValNumber 4),
                             ExprValue (ValNumber 5),
                             ExprValue (ValNumber 6),
