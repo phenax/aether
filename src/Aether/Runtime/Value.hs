@@ -45,6 +45,26 @@ typeOfValue (ValQuoted _) = "quote"
 typeOfValue (ValString _) = "string"
 typeOfValue ValNil = "list"
 
+mkErrorVal :: EvalValue -> EvalValue -> EvalValue
+mkErrorVal label msg = ValQuoted $ ExprSymList NullSpan [ExprValue label, ExprValue msg]
+
+evalErrorToValue :: EvalError -> EvalValue
+evalErrorToValue (UserError label msg) = mkErrorVal label msg
+evalErrorToValue (NameNotFound name) =
+  mkErrorVal
+    (ValQuoted $ ExprSymbol NullSpan "symbol-not-found")
+    (ValString message)
+  where
+    message = "Symbol '" ++ name ++ " is not defined"
+evalErrorToValue (ArgumentLengthError strict expected got name) =
+  mkErrorVal
+    (ValQuoted $ ExprSymbol NullSpan "incorrect-argument-length")
+    (ValString message)
+  where
+    message = "Expected " ++ expectedStr ++ " arguments but got " ++ show got ++ " (" ++ name ++ ")"
+    expectedStr = (if strict then "" else "at least ") ++ show expected
+evalErrorToValue e = ValQuoted $ ExprSymList NullSpan [ExprValue $ ValString "error", ExprValue $ ValString $ show e]
+
 showEvalValue :: EvalValue -> String
 showEvalValue ValNil = "#nil"
 showEvalValue (ValBool bool) = if bool then "#T" else "#F"

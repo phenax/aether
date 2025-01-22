@@ -14,11 +14,16 @@
   - [X] IO: display, displayNl
   - [X] Struct/Record
   - [X] Add source location for Expr type
-  - [ ] Error handling (pcall style or try/catch)
+  - [x] Error handling (pcall style)
+  - [ ] BUG: Fix issue with macro return value
+      - When arg of macro returns an s-expr containing a symbol as argument, it gets evaluated (in if)
+      - Maybe prevent arg to macros from becoming unquoted?
   - [ ] Optional properties
   - [ ] Type validation util
+  - [ ] Fix updating symbols `set`/`setlocal`
   - [ ] Allow list operations on string
   - [ ] Stack trace
+  - [ ] De-structuring macro, `(expand (a b c) (list 1 2 3))`
   - [ ] Cleanup your shitty spec
   - [ ] Shortcircuiting for &&, ||, eq?
 

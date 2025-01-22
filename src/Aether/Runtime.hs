@@ -33,7 +33,7 @@ standardLib =
              case result of
                Right ast -> pure $ parsed ++ ast
                Left e -> error $ errorBundlePretty e
-           libFiles = ["./stdlib/core.scm", "./stdlib/list.scm"]
+           libFiles = ["./stdlib/core.scm", "./stdlib/list.scm", "./stdlib/result.scm"]
 
        foldM loadCodeInEnv [] libFiles >>= lift
    )

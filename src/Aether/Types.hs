@@ -52,8 +52,10 @@ data EvalValue
 
 data EvalError
   = ArgumentError String
+  | ArgumentLengthError Bool Int Int String
   | TypeError String
   | NameNotFound Name
+  | UserError EvalValue EvalValue
   | UnknownError String
   deriving (Show, Eq)
 

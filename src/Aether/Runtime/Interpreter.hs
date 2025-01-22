@@ -4,7 +4,7 @@ import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupS
 import Aether.Runtime.Value
 import Aether.Types
 import Control.Monad ((>=>))
-import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
+import Control.Monad.Except (ExceptT, MonadError (catchError, throwError), runExceptT)
 import Control.Monad.State.Strict (MonadIO, MonadState, StateT (runStateT), gets, modify')
 import qualified Data.Map.Strict as Map
 
@@ -44,8 +44,15 @@ builtins =
         ("||", operateOnExprs (ValBool . any valToBool)),
         ("type", builtinTypeOf),
         ("display", builtinDisplay),
+        ("quote", builtinQuote),
+        ("try", builtinTry),
+        ("error!", builtinError),
         ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"]))
       ]
+
+builtinQuote :: [Expr] -> Evaluator m EvalValue
+builtinQuote [expr] = pure $ ValQuoted expr
+builtinQuote _ = throwError $ ArgumentError "foobar"
 
 builtinDisplay :: [Expr] -> Evaluator m EvalValue
 builtinDisplay exprs = do
@@ -156,7 +163,7 @@ builtinEvalE [expr] = do
   case res of
     ValQuoted quote -> interpretExpression quote
     _ -> pure res
-builtinEvalE _ = do throwError $ TypeError "Invalid number of arguments sent to eval"
+builtinEvalE exprs = do throwError $ ArgumentLengthError True 1 (length exprs) "eval"
 
 builtinCarE :: [Expr] -> Evaluator m EvalValue
 builtinCarE [expr] = do
@@ -166,7 +173,7 @@ builtinCarE [expr] = do
     ValQuoted (ExprSymList _ []) -> pure ValNil
     ValQuoted quote -> interpretExpression quote
     _ -> pure res
-builtinCarE _ = do throwError $ TypeError "Invalid number of arguments sent to car"
+builtinCarE exprs = do throwError $ ArgumentLengthError True 1 (length exprs) "car"
 
 builtinCdrE :: [Expr] -> Evaluator m EvalValue
 builtinCdrE [expr] = do
@@ -176,7 +183,7 @@ builtinCdrE [expr] = do
     ValQuoted (ExprSymList _ (_ : rest)) ->
       ValQuoted . ExprSymList NullSpan . fmap ExprValue <$> mapM interpretExpression rest
     _ -> pure ValNil
-builtinCdrE _ = do throwError $ TypeError "Invalid number of arguments sent to cdr"
+builtinCdrE exprs = do throwError $ ArgumentLengthError True 1 (length exprs) "cdr"
 
 builtinConsE :: [Expr] -> Evaluator m EvalValue
 builtinConsE [itemE, restE] = do
@@ -188,27 +195,44 @@ builtinConsE [itemE, restE] = do
     ValQuoted (ExprLiteral _ LitNil) -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item])
     ValQuoted (ExprValue ValNil) -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item])
     _ -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item, ExprValue rest])
-builtinConsE _ = do throwError $ TypeError "Invalid number of arguments sent to cons"
+builtinConsE exprs = do throwError $ ArgumentLengthError True 2 (length exprs) "cons"
 
 builtinLessThan :: [Expr] -> Evaluator m EvalValue
 builtinLessThan [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a <)) exp1 exp2
-builtinLessThan _ = throwError $ TypeError "Invalid number of arguments for lt?"
+builtinLessThan exprs = throwError $ ArgumentLengthError True 2 (length exprs) "lt?"
 
 builtinGreaterThan :: [Expr] -> Evaluator m EvalValue
 builtinGreaterThan [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a >)) exp1 exp2
-builtinGreaterThan _ = throwError $ TypeError "Invalid number of arguments for gt?"
+builtinGreaterThan exprs = throwError $ ArgumentLengthError True 2 (length exprs) "gt?"
 
 builtinLessThanOrEqualTo :: [Expr] -> Evaluator m EvalValue
 builtinLessThanOrEqualTo [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a <=)) exp1 exp2
-builtinLessThanOrEqualTo _ = throwError $ TypeError "Invalid number of arguments for lte?"
+builtinLessThanOrEqualTo exprs = throwError $ ArgumentLengthError True 2 (length exprs) "lte?"
 
 builtinGreaterThanOrEqualTo :: [Expr] -> Evaluator m EvalValue
 builtinGreaterThanOrEqualTo [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a >=)) exp1 exp2
-builtinGreaterThanOrEqualTo _ = throwError $ TypeError "Invalid number of arguments for gte?"
+builtinGreaterThanOrEqualTo exprs = throwError $ ArgumentLengthError True 2 (length exprs) "gte?"
 
 builtinTypeOf :: [Expr] -> Evaluator m EvalValue
 builtinTypeOf [expr] = ValQuoted . ExprSymbol NullSpan . typeOfValue <$> interpretExpression expr
-builtinTypeOf _ = throwError $ TypeError "Invalid number of arguments for type"
+builtinTypeOf exprs = throwError $ ArgumentLengthError True 1 (length exprs) "type"
+
+builtinTry :: [Expr] -> Evaluator m EvalValue
+builtinTry exprs = catchError (toRight <$> tryValue) (pure . toLeft . evalErrorToValue)
+  where
+    tryValue = interpretExpression (ExprSymList NullSpan $ ExprSymbol NullSpan "do" : exprs)
+    toRight v = ValQuoted $ ExprSymList NullSpan [ExprValue ValNil, ExprValue v]
+    toLeft e = ValQuoted $ ExprSymList NullSpan [ExprValue e, ExprValue ValNil]
+
+builtinError :: [Expr] -> Evaluator m EvalValue
+builtinError (labelE : messageE : _) = do
+  label <- interpretExpression labelE
+  message <- interpretExpression messageE
+  throwError $ UserError label message
+builtinError [labelE] = do
+  label <- interpretExpression labelE
+  throwError $ UserError label ValNil
+builtinError [] = throwError $ UserError (ValQuoted $ ExprSymbol NullSpan "error") ValNil
 
 numberBinaryOp :: (Double -> Double -> EvalValue) -> Expr -> Expr -> Evaluator m EvalValue
 numberBinaryOp fn exp1 exp2 = do

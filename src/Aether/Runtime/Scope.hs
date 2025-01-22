@@ -3,6 +3,7 @@ module Aether.Runtime.Scope where
 import Aether.Types
 import Control.Monad.Error.Class (MonadError (throwError))
 import Control.Monad.RWS (gets, modify')
+import Data.Bifunctor (Bifunctor (second))
 import qualified Data.Map.Strict as Map
 
 defineInCurrentScope :: Name -> EvalValue -> EvalEnvironment -> EvalEnvironment
@@ -36,14 +37,14 @@ closure (Stack {stack}) eval = do
     mergeCommon (x1 : xs1) (x2 : xs2) | scopeId x1 == scopeId x2 = (x1 <> x2) : mergeCommon xs1 xs2
     mergeCommon xs _ = xs
 
-zipArgs :: [Name] -> [EvalValue] -> Maybe [(Name, EvalValue)]
-zipArgs [] [] = pure []
-zipArgs ["...", label] rest = pure [(label, ValQuoted . ExprSymList NullSpan . fmap ExprValue $ rest)]
-zipArgs (label : labels) (arg : args) = ((label, arg) :) <$> zipArgs labels args
-zipArgs _ _ = Nothing
+zipArgs :: [Name] -> [EvalValue] -> Int -> (Int, Maybe [(Name, EvalValue)])
+zipArgs [] _ argCount = (argCount, Just [])
+zipArgs ["...", label] rest argCount = (argCount, Just [(label, ValQuoted . ExprSymList NullSpan . fmap ExprValue $ rest)])
+zipArgs (label : labels) (arg : args) argCount = second (fmap ((label, arg) :)) $ zipArgs labels args (argCount + 1)
+zipArgs _ _ argCount = (argCount, Nothing)
 
 argsToScope :: [Name] -> [EvalValue] -> Evaluator m Scope
 argsToScope labels args = do
-  case zipArgs labels args of
-    Just zargs -> mkScope $ Map.fromList zargs
-    Nothing -> throwError $ ArgumentError "Invalid number of arguments"
+  case zipArgs labels args 0 of
+    (_, Just zargs) -> mkScope $ Map.fromList zargs
+    (argCount, Nothing) -> throwError $ ArgumentLengthError False argCount (length args) "<todo: name of fn>"

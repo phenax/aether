@@ -1,6 +1,7 @@
 module Specs.Integration.StdlibSpec where
 
 import Aether.Runtime (runInterpreter)
+import Aether.Runtime.Value (mkErrorVal)
 import Aether.Syntax.Parser
 import Aether.Types
 import Data.String.Interpolate.IsString
@@ -293,10 +294,12 @@ test = do
           (record Person
             :name
             :age
-            :gender)
-          (set john (Person "John" 25 'male))
+            :gender
+            :address/country)
+          (set john (Person "John" 25 'male "India"))
           (:name john)
           (:gender john)
+          (:address/country john)
           (:age john)
         |]
         `shouldReturn` Right
@@ -304,6 +307,7 @@ test = do
             ValNil,
             ValString "John",
             ValQuoted $ ExprSymbol NullSpan "male",
+            ValString "India",
             ValNumber 25
           ]
 
@@ -410,3 +414,105 @@ test = do
             |> (curry (flip -) 1)}
         |]
         `shouldReturn` Right [ValNumber 41, ValNumber 41]
+
+  describe "builtin > error!/try" $ do
+    let result e v = ValQuoted $ ExprSymList NullSpan [ExprValue e, ExprValue v]
+
+    context "when expression raises an error" $ do
+      it "returns result with error" $ do
+        evalExpr
+          [i|
+            ; Have to use (quote 'division) instead of 'division due to a bug in macros
+            ; TODO: Fix that and replace it with 'division
+            (define (divide! a b)
+              (if (= b 0)
+                (error! (quote 'division-by-zero) "You divided by zero and died")
+                (/ a b)))
+
+            (try invalid-symbol)
+            (try (error! 'hello "World"))
+            (try (divide! 5 0))
+            (try (lt? 1 2 3))
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              result
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "symbol-not-found")
+                    (ValString "Symbol 'invalid-symbol is not defined")
+                )
+                ValNil,
+              result
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "hello")
+                    (ValString "World")
+                )
+                ValNil,
+              result
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "division-by-zero")
+                    (ValString "You divided by zero and died")
+                )
+                ValNil,
+              result
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "incorrect-argument-length")
+                    (ValString "Expected 2 arguments but got 3 (lt?)")
+                )
+                ValNil
+            ]
+    context "when expression does not raise an error" $ do
+      it "returns result without error" $ do
+        evalExpr
+          [i|
+            (try 20)
+            (try (+ 2 5))
+            (try (lt? (+ 3 4) 2))
+          |]
+          `shouldReturn` Right
+            [ result ValNil $ ValNumber 20,
+              result ValNil $ ValNumber 7,
+              result ValNil $ ValBool False
+            ]
+
+  describe "builtin > Error/Result" $ do
+    context "when try returns an error result" $ do
+      it "allow accessing error with getters" $ do
+        evalExpr
+          [i|
+            (set res (try invalid-symbol))
+            (:result/value res)
+            (:result/error res)
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValNil,
+              mkErrorVal
+                (ValQuoted $ ExprSymbol NullSpan "symbol-not-found")
+                (ValString "Symbol 'invalid-symbol is not defined")
+            ]
+      it "allow accessing error label and message with getters" $ do
+        evalExpr
+          [i|
+            (set res (try invalid-symbol))
+            (:error/label (:result/error res))
+            (:error/message (:result/error res))
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValQuoted $ ExprSymbol NullSpan "symbol-not-found",
+              ValString "Symbol 'invalid-symbol is not defined"
+            ]
+    context "when try returns a value result" $ do
+      it "allow accessing value with getters" $ do
+        evalExpr
+          [i|
+            (set res (try 200))
+            (:result/value res)
+            (:result/error res)
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValNumber 200,
+              ValNil
+            ]
