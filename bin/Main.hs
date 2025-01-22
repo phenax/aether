@@ -1,6 +1,7 @@
 module Main where
 
 import qualified Aether.Runtime as Runtime
+import Aether.Runtime.Value (evalErrorToValue, showEvalValue)
 import qualified Aether.Syntax.Parser as Parser
 import Aether.Types
 import Control.Monad.IO.Class (MonadIO)
@@ -22,7 +23,7 @@ main = do
 
 handleResult :: Either EvalError [EvalValue] -> IO ()
 handleResult (Right _val) = pure () -- mapM_ (putStrLn . showEvalValue) val
-handleResult (Left e) = error $ show e
+handleResult (Left e) = error $ showEvalValue $ evalErrorToValue e
 
 evalExpr :: (MonadIO m) => Text -> m (Either EvalError [EvalValue])
 evalExpr code = do

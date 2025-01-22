@@ -516,3 +516,54 @@ test = do
               ValNumber 200,
               ValNil
             ]
+
+  describe "core > expand" $ do
+    it "expands/destructures the values into symbols" $ do
+      evalExpr
+        [i|
+          (expand [a1 a2 a3] (list 1 2 3))
+          (list a1 a2 a3)
+
+          (expand [a1 a2 a3] (list 1 2))
+          (list a1 a2 a3)
+
+          (expand [a1 a2 a3] (list 1 2 3))
+          (list a1 a2)
+        |]
+        `shouldReturn` Right
+          [ ValNil,
+            ValQuoted $ ExprSymList NullSpan [ExprValue (ValNumber 1.0), ExprValue (ValNumber 2.0), ExprValue (ValNumber 3.0)],
+            ValNil,
+            ValQuoted $ ExprSymList NullSpan [ExprValue (ValNumber 1.0), ExprValue (ValNumber 2.0), ExprValue ValNil],
+            ValNil,
+            ValQuoted $ ExprSymList NullSpan [ExprValue (ValNumber 1.0), ExprValue (ValNumber 2.0)]
+          ]
+
+    context "when value is empty" $ do
+      it "expands/destructures the values into symbols" $ do
+        evalExpr
+          [i|
+            (expand [a1 a2] '())
+            (list a1 a2)
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValQuoted $ ExprSymList NullSpan [ExprValue ValNil, ExprValue ValNil]
+            ]
+
+    context "when value is not a list" $ do
+      it "expands/destructures the values into symbols" $ do
+        evalExpr
+          [i|
+            (expand [a1 a2] 500)
+            (list a1 a2)
+
+            (expand [a1 a2] "hello")
+            (list a1 a2)
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 500, ExprValue ValNil],
+              ValNil,
+              ValQuoted $ ExprSymList NullSpan [ExprValue $ ValString "hello", ExprValue ValNil]
+            ]

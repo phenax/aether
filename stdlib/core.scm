@@ -99,3 +99,23 @@
         properties
         (indexes properties))))
 
+;; Expand/Destructure values of a list
+;; Example:
+;;   (expand [a b c] (list 5 8 2))
+;;   (displayNl a ", " b ", " c)
+;; 
+;; TODO: Implement ... for rest of the items
+(defmacro (expand symbols values)
+  (concat
+    (list
+      'progn
+      (list set '... values))
+
+    (zip-with
+      (-> [sym index]
+        (list set sym
+          '(elem-at ,index ...)))
+      symbols
+      (indexes symbols))
+
+    #nil))
