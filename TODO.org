@@ -16,7 +16,8 @@
   - [X] Add source location for Expr type
   - [x] Error handling (pcall style)
   - [x] De-structuring macro, `(expand (a b c) (list 1 2 3))`
-  - [ ] Fix updating symbols `set`/`define`
+  - [x] Fix updating symbols `set`/`define`
+  - [ ] Optimize closure evaluation
   - [ ] BUG: Fix issue with macro return value
       - When arg of macro returns an s-expr containing a symbol as argument, it gets evaluated (in if)
       - Maybe prevent arg to macros from becoming unquoted?

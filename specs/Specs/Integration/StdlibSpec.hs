@@ -1,7 +1,7 @@
 module Specs.Integration.StdlibSpec where
 
 import Aether.Runtime (runInterpreter)
-import Aether.Runtime.Value (mkErrorVal)
+import Aether.Runtime.Value (mkErrorVal, mkResultVal)
 import Aether.Syntax.Parser
 import Aether.Types
 import Data.String.Interpolate.IsString
@@ -416,8 +416,6 @@ test = do
         `shouldReturn` Right [ValNumber 41, ValNumber 41]
 
   describe "builtin > error!/try" $ do
-    let result e v = ValQuoted $ ExprSymList NullSpan [ExprValue e, ExprValue v]
-
     context "when expression raises an error" $ do
       it "returns result with error" $ do
         evalExpr
@@ -436,25 +434,25 @@ test = do
           |]
           `shouldReturn` Right
             [ ValNil,
-              result
+              mkResultVal
                 ( mkErrorVal
                     (ValQuoted $ ExprSymbol NullSpan "symbol-not-found")
                     (ValString "Symbol 'invalid-symbol is not defined")
                 )
                 ValNil,
-              result
+              mkResultVal
                 ( mkErrorVal
                     (ValQuoted $ ExprSymbol NullSpan "hello")
                     (ValString "World")
                 )
                 ValNil,
-              result
+              mkResultVal
                 ( mkErrorVal
                     (ValQuoted $ ExprSymbol NullSpan "division-by-zero")
                     (ValString "You divided by zero and died")
                 )
                 ValNil,
-              result
+              mkResultVal
                 ( mkErrorVal
                     (ValQuoted $ ExprSymbol NullSpan "incorrect-argument-length")
                     (ValString "Expected 2 arguments but got 3 (lt?)")
@@ -470,9 +468,9 @@ test = do
             (try (lt? (+ 3 4) 2))
           |]
           `shouldReturn` Right
-            [ result ValNil $ ValNumber 20,
-              result ValNil $ ValNumber 7,
-              result ValNil $ ValBool False
+            [ mkResultVal ValNil $ ValNumber 20,
+              mkResultVal ValNil $ ValNumber 7,
+              mkResultVal ValNil $ ValBool False
             ]
 
   describe "builtin > Error/Result" $ do

@@ -1,6 +1,6 @@
 module Aether.Runtime.Interpreter where
 
-import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupSymbol, mkScope)
+import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupSymbol, mkScope, updateSymbolValue)
 import Aether.Runtime.Value
 import Aether.Types
 import Control.Monad ((>=>))
@@ -107,13 +107,16 @@ builtinDisplay exprs = do
 builtinSetE :: [Expr] -> Evaluator m EvalValue
 builtinSetE [ExprSymbol _ name, valueE] = do
   !value <- interpretExpression valueE
-  modify' $ defineInCurrentScope name value
+  modify' $ updateSymbolValue name value
   pure ValNil
-builtinSetE args = do throwError $ TypeError $ "Invalid call to set: " ++ show args
+builtinSetE (ExprSymbol _ _ : args) =
+  do throwError $ ArgumentLengthError True 2 (length args) "set"
+builtinSetE args =
+  do throwError $ TypeError $ "Invalid call to set: " ++ show args
 
 builtinDefineE :: [Expr] -> Evaluator m EvalValue
 builtinDefineE (ExprSymList sourceSpan (ExprSymbol _ name : argsE) : bodyE) = do
-  lambda <- createLambda sourceSpan argsE bodyE
+  lambda <- mkLambda sourceSpan argsE bodyE
   modify' $ defineInCurrentScope name lambda
   pure ValNil
 builtinDefineE [ExprSymbol _ name, valueE] = do
@@ -121,15 +124,18 @@ builtinDefineE [ExprSymbol _ name, valueE] = do
   modify' $ defineInCurrentScope name value
   pure ValNil
 builtinDefineE (ExprSymbol _ _ : args) =
-  do throwError $ ArgumentLengthError True 1 (length args) "define"
-builtinDefineE _ = do throwError $ TypeError "Invalid call to define"
+  do throwError $ ArgumentLengthError True 2 (length args) "define"
+builtinDefineE _ =
+  do throwError $ TypeError "Invalid call to define"
 
 builtinLambdaE :: [Expr] -> Evaluator m EvalValue
-builtinLambdaE (ExprSymList sourceSpan argsE : bodyE) = createLambda sourceSpan argsE bodyE
-builtinLambdaE _ = do throwError $ TypeError "Invalid call to ->"
+builtinLambdaE (ExprSymList sourceSpan argsE : bodyE) =
+  mkLambda sourceSpan argsE bodyE
+builtinLambdaE _ =
+  do throwError $ TypeError "Invalid call to ->"
 
-createLambda :: SourceSpan -> [Expr] -> [Expr] -> Evaluator m EvalValue
-createLambda sourceSpan argsE bodyE = do
+mkLambda :: SourceSpan -> [Expr] -> [Expr] -> Evaluator m EvalValue
+mkLambda sourceSpan argsE bodyE = do
   stack <- gets envCallStack
   pure $ ValLambda stack sourceSpan argLabels body
   where
@@ -148,9 +154,9 @@ builtinDefmacroE _ = do throwError $ TypeError "Invalid call to defmacro"
 
 builtinDoE :: [Expr] -> Evaluator m EvalValue
 builtinDoE body = do
-  (Stack stack) <- gets envCallStack
+  stack <- gets envCallStack
   !scope <- mkScope Map.empty
-  !results <- closure (Stack $ scope : stack) $ do
+  !results <- closure scope stack $ do
     mapM interpretExpression body
   pure $ case results of
     [] -> ValNil
@@ -251,18 +257,18 @@ operateOnExprs fn exprs = fn <$> mapM interpretExpression exprs
 
 evaluateCall :: EvalValue -> [Expr] -> Evaluator m EvalValue
 -- Lambda
-evaluateCall (ValLambda (Stack stack) _ labels body) argsE = do
+evaluateCall (ValLambda stack _ labels body) argsE = do
   args <- mapM interpretExpression argsE
   argsScope <- argsToScope labels args
-  closure (Stack $ argsScope : stack) $ interpretExpression body
+  closure argsScope stack $ interpretExpression body
 
 -- Macros
 -- TODO: Figure out how to lexically scope macros
 evaluateCall (ValMacro (Stack _defnstack) _ labels body) argsE = do
-  (Stack callerstack) <- gets envCallStack
+  callerstack <- gets envCallStack
   !args <- mapM interpretMacroArgs argsE
   !argsScope <- argsToScope labels args
-  !result <- closure (Stack $ argsScope : callerstack) $ interpretExpression body
+  !result <- closure argsScope callerstack $ interpretExpression body
   case result of
     ValQuoted expr -> interpretExpression $ unwrapQuotes expr
     _ -> pure result

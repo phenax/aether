@@ -84,10 +84,11 @@ test-suite specs
   ghc-options: -Wno-name-shadowing
   other-modules:
     TestUtils
-    Specs.ParserSpec
-    Specs.InterpreterSpec
     Specs.Integration.InterpreterSpec
     Specs.Integration.StdlibSpec
+    Specs.InterpreterSpec
+    Specs.ParserSpec
+    Specs.ScopeSpec
   build-depends:
     lib-aether,
     hspec

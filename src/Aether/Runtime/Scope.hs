@@ -11,6 +11,20 @@ defineInCurrentScope name value env@(EvalEnvironment {envCallStack = Stack (scop
   env {envCallStack = Stack $ scope {scopeTable = Map.insert name value (scopeTable scope)} : rest}
 defineInCurrentScope _ _ env = env
 
+updateSymbolValue :: Name -> EvalValue -> EvalEnvironment -> EvalEnvironment
+updateSymbolValue name value env =
+  case updateSymbolValueInStack $ envCallStack env of
+    Just stack -> env {envCallStack = stack}
+    Nothing -> defineInCurrentScope name value env
+  where
+    updateSymbolValueInStack (Stack (scope : rest)) = do
+      case Map.lookup name $ scopeTable scope of
+        Just _ -> Just $ Stack (updatedScope : rest)
+          where
+            updatedScope = scope {scopeTable = Map.insert name value $ scopeTable scope}
+        Nothing -> (\st -> st {stack = scope : stack st}) <$> updateSymbolValueInStack (Stack rest)
+    updateSymbolValueInStack (Stack []) = Nothing
+
 lookupSymbol :: Name -> EvalEnvironment -> Maybe EvalValue
 lookupSymbol sym env@(EvalEnvironment {envCallStack = Stack (scope : stack)}) =
   case Map.lookup sym (scopeTable scope) of
@@ -24,18 +38,39 @@ mkScope table = do
   modify' $ \env -> env {envScopeId = scopeId + 1}
   pure $ Scope {scopeId = ScopeId scopeId, scopeTable = table}
 
-closure :: Stack -> Evaluator m a -> Evaluator m a
-closure (Stack {stack}) eval = do
-  oldCallstack <- gets envCallStack
+showScope :: Scope -> String
+showScope (Scope {scopeId = ScopeId sid}) | sid == 0 = "    <root-scope>"
+showScope (Scope {scopeId = ScopeId sid, scopeTable}) =
+  "    <id: " ++ show sid ++ "> " ++ unwords (Map.keys scopeTable)
+
+showStack :: Stack -> String
+showStack (Stack stack) = unlines $ map showScope stack
+
+closure :: (Show a) => Scope -> Stack -> Evaluator m a -> Evaluator m a
+closure targetScope (Stack {stack = closureStack}) eval = do
+  !oldStack <- gets (stack . envCallStack)
   modify' mergeStack
-  res <- eval
-  modify' $ \env -> env {envCallStack = oldCallstack}
+  !res <- eval
+  modify' $ popStack oldStack
   pure res
   where
-    mergeStack env@(EvalEnvironment {envCallStack = Stack {stack = callsite}}) =
-      env {envCallStack = Stack $ reverse $ mergeCommon (reverse stack) (reverse callsite)}
-    mergeCommon (x1 : xs1) (x2 : xs2) | scopeId x1 == scopeId x2 = (x1 <> x2) : mergeCommon xs1 xs2
-    mergeCommon xs _ = xs
+    targetStack = targetScope : closureStack
+
+    popStack oldStack env = env {envCallStack = Stack closureScopePoppedStack}
+      where
+        currentStack = stack $ envCallStack env
+        closureScopePoppedStack = reverse $ selectMatchingScopes (reverse oldStack) (reverse currentStack)
+
+    mergeStack env = env {envCallStack = Stack mergedStack}
+      where
+        currentStack = stack $ envCallStack env
+        mergedStack = reverse $ mergeCommonScopes (reverse targetStack) (reverse currentStack)
+
+    mergeCommonScopes (x1 : xs1) (x2 : xs2) | scopeId x1 == scopeId x2 = (x1 <> x2) : mergeCommonScopes xs1 xs2
+    mergeCommonScopes xs _ = xs
+
+    selectMatchingScopes (x1 : xs1) (x2 : xs2) | scopeId x1 == scopeId x2 = x2 : selectMatchingScopes xs1 xs2
+    selectMatchingScopes xs _ = xs
 
 zipArgs :: [Name] -> [EvalValue] -> Int -> (Int, Maybe [(Name, EvalValue)])
 zipArgs [] _ argCount = (argCount, Just [])

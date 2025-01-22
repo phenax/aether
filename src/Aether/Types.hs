@@ -81,7 +81,7 @@ data EvalEnvironment = EvalEnvironment {envCallStack :: !Stack, envScopeId :: !I
   deriving (Show)
 
 instance Semigroup EvalEnvironment where
-  (<>) _ _ = undefined -- TODO: Think
+  (<>) _ _ = undefined -- TODO: Think. Maybe merging of stacks?
 
 instance Monoid EvalEnvironment where
   mempty = EvalEnvironment {envScopeId = 1, envCallStack = Stack [Scope {scopeId = ScopeId 0, scopeTable = Map.empty}]}

@@ -1,6 +1,7 @@
 module Specs.Integration.InterpreterSpec where
 
 import Aether.Runtime (runInterpreter)
+import Aether.Runtime.Value (mkErrorVal, mkResultVal)
 import Aether.Syntax.Parser
 import Aether.Types
 import Data.String.Interpolate.IsString
@@ -358,4 +359,54 @@ test = do
                             ExprValue (ValNumber 7)
                           ]
                   ]
+            ]
+
+  describe "builtins > set" $ do
+    context "when setting a new value" $ do
+      it "defines value in current scope" $ do
+        evalExpr
+          [i|
+            (set a "outside")
+
+            (do
+              (set b "inside")
+              b)
+            a
+            (try b)
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValString "inside",
+              ValString "outside",
+              mkResultVal
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "symbol-not-found")
+                    (ValString "Symbol 'b is not defined")
+                )
+                ValNil
+            ]
+
+    context "when updating a value set in the scope above" $ do
+      it "updates value in the previous scope" $ do
+        evalExpr
+          [i|
+            (set foobar "outside")
+            (define (scope) 
+              (set foobar "inside lambda")
+              foobar)
+
+            foobar
+            (do
+              (set foobar "inside do")
+              foobar)
+            (scope)
+            foobar
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValNil,
+              ValString "outside",
+              ValString "inside do",
+              ValString "inside lambda",
+              ValString "inside lambda"
             ]

@@ -48,6 +48,9 @@ typeOfValue ValNil = "list"
 mkErrorVal :: EvalValue -> EvalValue -> EvalValue
 mkErrorVal label msg = ValQuoted $ ExprSymList NullSpan [ExprValue label, ExprValue msg]
 
+mkResultVal :: EvalValue -> EvalValue -> EvalValue
+mkResultVal e v = ValQuoted $ ExprSymList NullSpan [ExprValue e, ExprValue v]
+
 evalErrorToValue :: EvalError -> EvalValue
 evalErrorToValue (UserError label msg) = mkErrorVal label msg
 evalErrorToValue (NameNotFound name) =
