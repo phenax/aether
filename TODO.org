@@ -15,22 +15,23 @@
   - [X] Struct/Record
   - [X] Add source location for Expr type
   - [x] Error handling (pcall style)
-  - [ ] De-structuring macro, `(expand (a b c) (list 1 2 3))`
+  - [x] De-structuring macro, `(expand (a b c) (list 1 2 3))`
+  - [ ] Fix updating symbols `set`/`define`
   - [ ] BUG: Fix issue with macro return value
       - When arg of macro returns an s-expr containing a symbol as argument, it gets evaluated (in if)
       - Maybe prevent arg to macros from becoming unquoted?
-  - [ ] Fix updating symbols `set`/`define`
   - [ ] Operations on string
-  - [ ] Optional properties
   - [ ] Stack trace first class value
+  - [ ] Shortcircuiting for &&, ||
   - [ ] Cleanup your shitty spec
-  - [ ] Shortcircuiting for &&, ||, eq?
 
 * Later
-  - [ ] `%`, `even?`, `odd?`
-  - [ ] Type validation util
-  - [ ] `(assoc obj ':name "value")`, 
   - [ ] Repl
+  - [ ] `%`, `even?`, `odd?`
+  - [ ] Add `...` support for de-structuring macro
+  - [ ] Type validation util
+  - [ ] `(assoc obj ':name "value")`
+  - [ ] Optional properties
   - [ ] Shell commands
   - [ ] require other modules
   - [ ] Optional arguments?

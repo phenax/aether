@@ -50,16 +50,6 @@ builtins =
         ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"]))
       ]
 
-builtinQuote :: [Expr] -> Evaluator m EvalValue
-builtinQuote [expr] = pure $ ValQuoted expr
-builtinQuote _ = throwError $ ArgumentError "foobar"
-
-builtinDisplay :: [Expr] -> Evaluator m EvalValue
-builtinDisplay exprs = do
-  let displayVal = putStringToScreen . showEvalValue
-  mapM_ (interpretExpression >=> displayVal) exprs
-  pure ValNil
-
 interpretLiteral :: Literal -> Evaluator m EvalValue
 interpretLiteral = \case
   LitString str -> pure $ ValString str
@@ -104,6 +94,16 @@ interpretExpression = \case
       expandSymList (ValQuoted sym@(ExprSymbol _ _)) = interpretExpression sym >>= expandSymList
       expandSymList e = pure [ExprValue e]
 
+builtinQuote :: [Expr] -> Evaluator m EvalValue
+builtinQuote [expr] = pure $ ValQuoted expr
+builtinQuote args = throwError $ ArgumentLengthError True 1 (length args) "quote"
+
+builtinDisplay :: [Expr] -> Evaluator m EvalValue
+builtinDisplay exprs = do
+  let displayVal = putStringToScreen . showEvalValue
+  mapM_ (interpretExpression >=> displayVal) exprs
+  pure ValNil
+
 builtinSetE :: [Expr] -> Evaluator m EvalValue
 builtinSetE [ExprSymbol _ name, valueE] = do
   !value <- interpretExpression valueE
@@ -111,24 +111,30 @@ builtinSetE [ExprSymbol _ name, valueE] = do
   pure ValNil
 builtinSetE args = do throwError $ TypeError $ "Invalid call to set: " ++ show args
 
+builtinDefineE :: [Expr] -> Evaluator m EvalValue
+builtinDefineE (ExprSymList sourceSpan (ExprSymbol _ name : argsE) : bodyE) = do
+  lambda <- createLambda sourceSpan argsE bodyE
+  modify' $ defineInCurrentScope name lambda
+  pure ValNil
+builtinDefineE [ExprSymbol _ name, valueE] = do
+  value <- interpretExpression valueE
+  modify' $ defineInCurrentScope name value
+  pure ValNil
+builtinDefineE (ExprSymbol _ _ : args) =
+  do throwError $ ArgumentLengthError True 1 (length args) "define"
+builtinDefineE _ = do throwError $ TypeError "Invalid call to define"
+
 builtinLambdaE :: [Expr] -> Evaluator m EvalValue
-builtinLambdaE (ExprSymList sourceSpan argsE : bodyE) = do
+builtinLambdaE (ExprSymList sourceSpan argsE : bodyE) = createLambda sourceSpan argsE bodyE
+builtinLambdaE _ = do throwError $ TypeError "Invalid call to ->"
+
+createLambda :: SourceSpan -> [Expr] -> [Expr] -> Evaluator m EvalValue
+createLambda sourceSpan argsE bodyE = do
   stack <- gets envCallStack
   pure $ ValLambda stack sourceSpan argLabels body
   where
     argLabels = argToLabel <$> argsE
     body = if length bodyE == 1 then head bodyE else ExprSymList NullSpan (ExprSymbol NullSpan "progn" : bodyE)
-builtinLambdaE _ = do throwError $ TypeError "Invalid call to ->"
-
-builtinDefineE :: [Expr] -> Evaluator m EvalValue
-builtinDefineE (ExprSymList sourceSpan (ExprSymbol _ name : argsE) : bodyE) = do
-  stack <- gets envCallStack
-  modify' $ defineInCurrentScope name (ValLambda stack sourceSpan argLabels body)
-  pure ValNil
-  where
-    argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList NullSpan (ExprSymbol NullSpan "progn" : bodyE)
-builtinDefineE _ = do throwError $ TypeError "Invalid call to define"
 
 builtinDefmacroE :: [Expr] -> Evaluator m EvalValue
 builtinDefmacroE (ExprSymList sourceSpan (ExprSymbol _ name : argsE) : bodyE) = do

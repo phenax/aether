@@ -163,7 +163,7 @@ test = do
     it "allows building up conditionals" $ do
       evalExpr
         [i|
-          (set num 50)
+          (define num 50)
           (cond
             [(lt? num 3)   "baby"]
             [(lt? num 13)  "child"]
@@ -196,7 +196,7 @@ test = do
       evalExpr
         [i|
           (define (foobar a b c) (+ a (* b c)))
-          (set arguments '[1 2 3])
+          (define arguments '[1 2 3])
           (apply foobar arguments)
         |]
         `shouldReturn` Right [ValNil, ValNil, ValNumber 7]
@@ -296,7 +296,7 @@ test = do
             :age
             :gender
             :address/country)
-          (set john (Person "John" 25 'male "India"))
+          (define john (Person "John" 25 'male "India"))
           (:name john)
           (:gender john)
           (:address/country john)
@@ -379,7 +379,7 @@ test = do
     it "returns the index of given item" $ do
       evalExpr
         [i|
-          (set ls (list 1 1 2 3 5 8 13 21))
+          (define ls (list 1 1 2 3 5 8 13 21))
           (index-of 8 ls)
           (index-of 21 ls)
           (index-of 1 ls)
@@ -396,7 +396,7 @@ test = do
     it "returns the index of given item" $ do
       evalExpr
         [i|
-          (set ls (list 1 1 2 3 5 8 13 21))
+          (define ls (list 1 1 2 3 5 8 13 21))
           (contains? 8 ls)
           (contains? 1 ls)
           (contains? 99 ls)
@@ -480,7 +480,7 @@ test = do
       it "allow accessing error with getters" $ do
         evalExpr
           [i|
-            (set res (try invalid-symbol))
+            (define res (try invalid-symbol))
             (:result/value res)
             (:result/error res)
           |]
@@ -494,7 +494,7 @@ test = do
       it "allow accessing error label and message with getters" $ do
         evalExpr
           [i|
-            (set res (try invalid-symbol))
+            (define res (try invalid-symbol))
             (:error/label (:result/error res))
             (:error/message (:result/error res))
           |]
@@ -507,7 +507,7 @@ test = do
       it "allow accessing value with getters" $ do
         evalExpr
           [i|
-            (set res (try 200))
+            (define res (try 200))
             (:result/value res)
             (:result/error res)
           |]

@@ -151,7 +151,7 @@ test = do
       it "evaluates unquotes" $ do
         evalExpr
           [i|
-            (set foobar 20)
+            (define foobar 20)
             '(hello ,(+ 20 3) world ,foobar)
           |]
           `shouldReturn` Right
@@ -171,8 +171,8 @@ test = do
         it "evaluates spliced unquote" $ do
           evalExpr
             [i|
-              (set foobar '(1 2 3))
-              (set value 200)
+              (define foobar '(1 2 3))
+              (define value 200)
               '(hello ,@foobar world ,foobar)
               '(hello ,@value world ,value)
             |]
@@ -200,8 +200,8 @@ test = do
         it "nested unquotes" $ do
           evalExpr
             [i|
-              (set foobar 20)
-              (set list '(1 2 3))
+              (define foobar 20)
+              (define list '(1 2 3))
               '(hello (+ ,foobar ,@list) world)
             |]
             `shouldReturn` Right
@@ -271,7 +271,58 @@ test = do
                   )
               ]
 
-    context "define scopes" $ do
+    describe "example/factorial" $ do
+      it "evaluates successfully" $ do
+        evalExpr
+          [i|
+            (define (factorial n)
+              (if (<= n 1)
+                  1
+                  (* n (factorial (- n 1)))))
+
+            (factorial 10)
+          |]
+          `shouldReturn` Right [ValNil, ValNumber 3628800]
+
+  describe "builtins > progn" $ do
+    context "evaluates expression sequentially in current scope" $ do
+      it "defines value in current scope" $ do
+        evalExpr
+          [i|
+            (define foobar 10)
+            foobar
+            (progn
+              (define foobar (+ foobar 5))
+              foobar)
+            foobar
+          |]
+          `shouldReturn` Right [ValNil, ValNumber 10, ValNumber 15, ValNumber 15]
+
+  describe "builtins > define" $ do
+    context "when defining value" $ do
+      it "defines value in current scope" $ do
+        evalExpr
+          [i|
+            (define foobar "outside")
+            (define (scope)
+              (define foobar "inside lambda")
+              foobar)
+
+            (do
+              (define foobar "inside do")
+              foobar)
+            (scope)
+            foobar
+          |]
+          `shouldReturn` Right
+            [ ValNil,
+              ValNil,
+              ValString "inside do",
+              ValString "inside lambda",
+              ValString "outside"
+            ]
+
+    context "when defining lambda" $ do
       it "lambda uses scope where it was defined" $ do
         evalExpr
           [i|
@@ -281,12 +332,12 @@ test = do
           |]
           `shouldReturn` Right [ValNil, ValNil, ValNumber 205]
 
-    context "var args" $ do
+    context "when defining lambda with variable number of arguments" $ do
       it "allows accepting a variable number of arguments" $ do
         evalExpr
           [i|
             (define (foo a b c ... rest)
-              '(,a ,b ,c ,rest))
+              (list a b c rest))
             (foo 1 2 3 4 5 6 7)
           |]
           `shouldReturn` Right
@@ -308,16 +359,3 @@ test = do
                           ]
                   ]
             ]
-
-    describe "example/factorial" $ do
-      it "evaluates successfully" $ do
-        evalExpr
-          [i|
-            (define (factorial n)
-              (if (<= n 1)
-                  1
-                  (* n (factorial (- n 1)))))
-
-            (factorial 10)
-          |]
-          `shouldReturn` Right [ValNil, ValNumber 3628800]

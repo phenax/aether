@@ -25,10 +25,10 @@ test = do
         evalExpr (ExprQuoted dummySpan (ExprSymList dummySpan [])) `shouldReturn` Right ValNil
 
     context "when setting/getting a symbol" $ do
-      context "when a symbol was set" $ do
+      context "when a symbol was defined" $ do
         it "gets value of symbol" $ do
           let exprs =
-                [ ExprSymList dummySpan [ExprSymbol dummySpan "set", ExprSymbol dummySpan "foobar", ExprLiteral dummySpan $ LitNumber 923],
+                [ ExprSymList dummySpan [ExprSymbol dummySpan "define", ExprSymbol dummySpan "foobar", ExprLiteral dummySpan $ LitNumber 923],
                   ExprSymbol dummySpan "foobar"
                 ]
           evalExprs exprs `shouldReturn` Right [ValNil, ValNumber 923]
@@ -60,15 +60,15 @@ test = do
               ]
         evalExprs exprs `shouldReturn` Right [ValNil, ValNumber 42.0]
 
-      context "when trying to use value set inside a lambda" $ do
+      context "when trying to use value defined inside a lambda" $ do
         it "returns original value" $ do
           let exprs =
-                [ ExprSymList dummySpan [ExprSymbol dummySpan "set", ExprSymbol dummySpan "foobar", ExprLiteral dummySpan $ LitNumber 42],
+                [ ExprSymList dummySpan [ExprSymbol dummySpan "define", ExprSymbol dummySpan "foobar", ExprLiteral dummySpan $ LitNumber 42],
                   ExprSymList
                     dummySpan
                     [ ExprSymbol dummySpan "define",
                       ExprSymList dummySpan [ExprSymbol dummySpan "myfunc"],
-                      ExprSymList dummySpan [ExprSymbol dummySpan "set", ExprSymbol dummySpan "foobar", ExprLiteral dummySpan $ LitNumber 69]
+                      ExprSymList dummySpan [ExprSymbol dummySpan "define", ExprSymbol dummySpan "foobar", ExprLiteral dummySpan $ LitNumber 69]
                     ],
                   ExprSymList dummySpan [ExprSymbol dummySpan "myfunc"],
                   ExprSymbol dummySpan "foobar"

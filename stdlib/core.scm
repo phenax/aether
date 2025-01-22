@@ -3,15 +3,15 @@
 (define (const x) (-> [_] x))
 (define (not a) (a #F #T))
 (define (apply fn args) (eval '(,fn ,@args)))
-(set = eq?)
-(set < lt?)
-(set > gt?)
-(set <= lte?)
-(set >= gte?)
+(define = eq?)
+(define < lt?)
+(define > gt?)
+(define <= lte?)
+(define >= gte?)
 
 ; Function
 (define (curry fn x) (-> [y] (fn x y)))
-(set _^ curry)
+(define _^ curry)
 (define (^_ fn x) (-> [y] (fn y x)))
 (define (flip fn) (-> [x y] (fn y x)))
 
@@ -46,10 +46,10 @@
 ;;        (+ value1 value2))
 (defmacro (let bindings ... body)
   '(do
-    ,@(map (-> [bind] '(set ,@bind)) bindings)
+    ,@(map (-> [bind] '(define ,@bind)) bindings)
     ,@body))
 
-(set else #T)
+(define else #T)
 
 ;; Cond conditional
 ;; Example:
@@ -87,15 +87,15 @@
 ;;     :age
 ;;     :gender)
 ;;
-;;   (set john (Person "John" 25 'male))
+;;   (define john (Person "John" 25 'male))
 ;;   (displayNl (:gender john))
 (defmacro (record type-name ... properties)
   (define (mk-get index) (-> [obj] (elem-at index obj)))
 
   '(progn
-    ,(list 'set type-name list)
+    ,(list define type-name list)
     ,@(zip-with
-        (-> [prop index] (list 'set prop (mk-get index)))
+        (-> [prop index] (list 'define prop (mk-get index)))
         properties
         (indexes properties))))
 
@@ -109,11 +109,11 @@
   (concat
     (list
       'progn
-      (list set '... values))
+      (list define '... values))
 
     (zip-with
       (-> [sym index]
-        (list set sym
+        (list define sym
           '(elem-at ,index ...)))
       symbols
       (indexes symbols))
