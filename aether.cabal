@@ -71,8 +71,9 @@ library lib-aether
     Aether
     Aether.Runtime
     Aether.Runtime.Interpreter
-    Aether.Runtime.Value
+    Aether.Runtime.LangIO
     Aether.Runtime.Scope
+    Aether.Runtime.Value
     Aether.Syntax.Parser
     Aether.Types
 

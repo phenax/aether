@@ -1,5 +1,6 @@
 module Aether.Runtime.Interpreter where
 
+import Aether.Runtime.LangIO (LangIOT (runLangIOT))
 import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupSymbol, mkScope, updateSymbolValue)
 import Aether.Runtime.Value
 import Aether.Types

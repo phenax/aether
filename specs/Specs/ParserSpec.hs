@@ -6,7 +6,6 @@ import Data.Either (isLeft)
 import Data.String.Interpolate.IsString
 import Test.Hspec
 import TestUtils
-import Text.Megaparsec (SourcePos (SourcePos), mkPos)
 
 test :: SpecWith ()
 test = do
