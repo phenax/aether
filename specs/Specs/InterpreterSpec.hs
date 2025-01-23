@@ -2,6 +2,7 @@ module Specs.InterpreterSpec where
 
 import Aether.Runtime (runExprInterpreter, runInterpreter)
 import Aether.Types
+import Data.Sequence (Seq (Empty))
 import Test.Hspec
 import TestUtils
 
@@ -87,7 +88,7 @@ test = do
                   ExprSymbol dummySpan "foobar"
                 ]
           evalExprs exprs
-            `shouldReturn` Right [ValNil, ValLambda (Stack []) dummySpan ["a"] $ ExprSymbol dummySpan "a"]
+            `shouldReturn` Right [ValNil, ValLambda (Stack Empty) dummySpan ["a"] $ ExprSymbol dummySpan "a"]
 
     context "when calling a boolean" $ do
       context "when value is true (#T)" $ do
@@ -118,6 +119,12 @@ test = do
               ExprSymList
                 dummySpan
                 [ ExprSymbol dummySpan "eval",
-                  ExprQuoted dummySpan $ ExprSymList dummySpan [ExprSymbol dummySpan "-", ExprLiteral dummySpan $ LitNumber 200, ExprLiteral dummySpan $ LitNumber 15]
+                  ExprQuoted dummySpan $
+                    ExprSymList
+                      dummySpan
+                      [ ExprSymbol dummySpan "-",
+                        ExprLiteral dummySpan $ LitNumber 200,
+                        ExprLiteral dummySpan $ LitNumber 15
+                      ]
                 ]
         evalExpr expr `shouldReturn` Right (ValNumber 185)

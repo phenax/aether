@@ -4,8 +4,9 @@ module Aether.Types where
 
 import Control.Monad.Except (MonadError)
 import Control.Monad.RWS.Strict (MonadIO (liftIO), MonadState)
-import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
+import Data.Sequence (Seq)
+import qualified Data.Sequence as Seq
 import Language.Haskell.TH.Lift (deriveLiftMany)
 import Text.Megaparsec (Pos, SourcePos)
 
@@ -65,10 +66,12 @@ data Scope = Scope {scopeId :: !ScopeId, scopeTable :: !(Map.Map Name EvalValue)
 instance Semigroup Scope where
   (<>) s1 s2 = Scope {scopeId = scopeId s1, scopeTable = Map.union (scopeTable s1) (scopeTable s2)}
 
-newtype Stack = Stack {stack :: [Scope]}
+newtype Stack = Stack {stack :: Seq Scope}
 
 instance Show Stack where
-  show (Stack st) = "<stack: " ++ intercalate "|" (map ((\(ScopeId i) -> show i) . scopeId) st) ++ ">"
+  show (Stack st) = "<stack: " ++ show (fmap showId st) ++ ">"
+    where
+      showId = (\(ScopeId i) -> show i) . scopeId
 
 -- NOTE: To not affect lambdas in test. DO NOT CHECK FOR EQUALITY
 instance Eq Stack where
@@ -84,7 +87,11 @@ instance Semigroup EvalEnvironment where
   (<>) _ _ = undefined -- TODO: Think. Maybe merging of stacks?
 
 instance Monoid EvalEnvironment where
-  mempty = EvalEnvironment {envScopeId = 1, envCallStack = Stack [Scope {scopeId = ScopeId 0, scopeTable = Map.empty}]}
+  mempty =
+    EvalEnvironment
+      { envScopeId = 1,
+        envCallStack = Stack $ Seq.singleton $ Scope {scopeId = ScopeId 0, scopeTable = Map.empty}
+      }
 
 class (Monad m) => MonadLangIO m where
   putStringToScreen :: String -> m ()
