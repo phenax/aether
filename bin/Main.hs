@@ -7,23 +7,67 @@ import Aether.Types
 import Control.Monad.IO.Class (MonadIO)
 import Data.Default (Default (def))
 import Data.Text (Text)
+import qualified Data.Text as Text
 import qualified Data.Text.IO as TextIO
 import qualified System.Environment
+import System.Exit (exitSuccess)
+import System.IO (hFlush, stdout)
 import Text.Megaparsec (errorBundlePretty)
+
+data Action = Repl | RunScript FilePath
+  deriving (Show, Eq)
+
+data Configuration = Configuration
+  { configAction :: Maybe Action,
+    configHelp :: Bool
+  }
+  deriving (Show, Eq)
+
+instance Default Configuration where
+  def = Configuration {configAction = Nothing, configHelp = False}
 
 main :: IO ()
 main = do
   args <- System.Environment.getArgs
   case parseArgs args def of
     Configuration {configHelp = True} -> putStrLn "Help"
-    Configuration {configScriptFile = Just scriptFile} -> do
+    Configuration {configAction = Just (RunScript scriptFile)} -> do
       code <- TextIO.readFile scriptFile
-      evalExpr code >>= handleResult
+      evalExpr code >>= throwIfError
+    Configuration {configAction = Just Repl} -> do
+      env <- Runtime.envWithStdLib
+      runRepl env
     _ -> pure ()
+  where
+    throwIfError :: Either EvalError [EvalValue] -> IO ()
+    throwIfError (Right _val) = pure ()
+    throwIfError (Left e) = error $ showEvalValue $ evalErrorToValue e
 
-handleResult :: Either EvalError [EvalValue] -> IO ()
-handleResult (Right _val) = pure () -- mapM_ (putStrLn . showEvalValue) val
-handleResult (Left e) = error $ showEvalValue $ evalErrorToValue e
+runRepl :: EvalEnvironment -> IO ()
+runRepl env = do
+  putStr "λ " >> hFlush stdout
+  code <- TextIO.getLine
+  case Text.unpack code of
+    ('\\' : cmd) -> evalCommand cmd >> runRepl env
+    _ -> evalCode code >>= runRepl
+  where
+    evalCommand "q" = exitSuccess
+    evalCommand "quit" = exitSuccess
+    evalCommand _ = pure ()
+
+    evalCode :: Text -> IO EvalEnvironment
+    evalCode code = do
+      let parsedResult = Parser.parseAll "input" code
+      case parsedResult of
+        Right exprs -> do
+          (result, nextEnv) <- Runtime.evaluator env exprs
+          printResult result
+          pure nextEnv
+        Left e -> env <$ putStrLn (errorBundlePretty e)
+
+    printResult :: Either EvalError [EvalValue] -> IO ()
+    printResult (Right val) = putStr . unlines $ fmap showEvalValue val
+    printResult (Left e) = putStrLn . showEvalValue $ evalErrorToValue e
 
 evalExpr :: (MonadIO m) => Text -> m (Either EvalError [EvalValue])
 evalExpr code = do
@@ -32,17 +76,10 @@ evalExpr code = do
     Right exprs -> Runtime.runInterpreter exprs
     Left e -> error $ errorBundlePretty e
 
-data Configuration = Configuration
-  { configScriptFile :: Maybe FilePath,
-    configHelp :: Bool
-  }
-  deriving (Show, Eq)
-
-instance Default Configuration where
-  def = Configuration {configScriptFile = Nothing, configHelp = False}
-
 parseArgs :: [String] -> Configuration -> Configuration
-parseArgs ("-f" : file : _) config = config {configScriptFile = Just file}
+parseArgs ("repl" : _) config = config {configAction = Just Repl}
+parseArgs ("run" : file : _) config = config {configAction = Just $ RunScript file}
 parseArgs ("-h" : _) config = config {configHelp = True}
 parseArgs ("--help" : _) config = config {configHelp = True}
-parseArgs _ config = config
+parseArgs [] config = config
+parseArgs (_ : _) config = config {configHelp = True}

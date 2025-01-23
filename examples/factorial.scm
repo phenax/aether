@@ -1,16 +1,16 @@
 
-;; (define (factorial num)
-;;   (if (<= num 1) 1
-;;     (* num (factorial (- num 1)))))
+(define (factorial num)
+  (if (<= num 1) 1
+    (* num (factorial (- num 1)))))
+
+(for (range 0 10) (-> [n]
+  (displayNl (cons n (factorial n)))))
+
+;; (define (fibo n)
+;;   (if (<= n 1) 1
+;;     (+ (fibo (- n 1)) (fibo (- n 2)))))
 ;;
-;; (for (range 0 10) (-> [n]
-;;   (displayNl (cons n (factorial n)))))
-
-(define (fibo n)
-  (if (<= n 1) 1
-    (+ (fibo (- n 1)) (fibo (- n 2)))))
-
-(displayNl (fibo 25))
+;; (displayNl (fibo 25))
 
 ;; (define (get-spec-property value)
 ;;   (-> [... spec]

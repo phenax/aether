@@ -18,6 +18,7 @@
   - [x] De-structuring macro, `(expand (a b c) (list 1 2 3))`
   - [x] Fix updating symbols `set`/`define`
   - [x] Optimize closure evaluation
+  - [ ] Allow empty files
   - [ ] BUG: Fix issue with macro return value
       - When arg of macro returns an s-expr containing a symbol as argument, it gets evaluated (in if)
       - Maybe prevent arg to macros from becoming unquoted?
@@ -28,6 +29,7 @@
 
 * Later
   - [ ] Repl
+  - [ ] Unwrap macro builtin
   - [ ] `%`, `even?`, `odd?`
   - [ ] Add `...` support for de-structuring macro
   - [ ] Type validation util
@@ -38,13 +40,13 @@
   - [ ] Optional arguments?
   - [ ] Optimize interpreter perfomance
   - [ ] Socket server mode + socket for commands
-  - [ ] UI for sending commands (dmenu-like)
-  - [ ] UI repl completion
-  - [ ] UI repl highlighting
   - [ ] Parser: Allow string escaping \"
   - [ ] IO interface: read from stdin
   - [ ] Read/Write files
   - [ ] To js?
+  - [ ] UI for sending commands (dmenu-like)
+  - [ ] UI repl completion
+  - [ ] UI repl highlighting
 
 * Maybe
   - [ ] JIT

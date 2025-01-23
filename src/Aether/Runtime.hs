@@ -23,6 +23,9 @@ runInterpreter exprs = do
 envWithStdLib :: (MonadIO m) => m EvalEnvironment
 envWithStdLib = snd <$> runInterpreterRaw mempty standardLib
 
+evaluator :: (MonadIO m) => EvalEnvironment -> [Expr] -> m (Either EvalError [EvalValue], EvalEnvironment)
+evaluator = runInterpreterRaw
+
 -- Load and parse the standard library at compile time
 standardLib :: [Expr]
 standardLib =

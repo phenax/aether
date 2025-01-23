@@ -1,6 +1,9 @@
 default:
   @just --choose
 
+repl *args:
+  rlwrap just run repl {{args}}
+
 run *args:
   cabal run aether -- {{args}}
 

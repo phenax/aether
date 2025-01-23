@@ -33,6 +33,7 @@
           devPackages = with pkgs; [
             just
             nodemon
+            rlwrap
           ];
         in {
           haskellProjects.default = {
