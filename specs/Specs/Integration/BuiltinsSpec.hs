@@ -276,7 +276,7 @@ test = do
         evalExpr code
       result `shouldBe` Right [ValNil]
 
-  describe "builtin > shell" $ do
+  describe "builtin > !: exec commands" $ do
     it "runs given command" $ do
       let code =
             [i|
@@ -301,3 +301,43 @@ test = do
               )
               ValNil
           ]
+
+  describe "builtin > import" $ do
+    let mkTestScript s = [ExprSymList NullSpan [ExprSymbol NullSpan "displayNl", ExprLiteral NullSpan $ LitString s]]
+
+    it "imports script files sequentially" $ do
+      let code = [i| (import "./script1" 'script2) |]
+      result <- runWithMocks $ do
+        expect $ LoadScriptToAST "./script1" |-> Right (mkTestScript "Loaded script 1")
+        expect $ LoadScriptToAST "script2" |-> Right (mkTestScript "Loaded script 2")
+        expect $ PutStringToScreen "Loaded script 1"
+        expect $ PutStringToScreen "\n"
+        expect $ PutStringToScreen "Loaded script 2"
+        expect $ PutStringToScreen "\n"
+        evalExpr code
+      result `shouldBe` Right [ValNil]
+
+    context "when imported script has an error" $ do
+      it "imports a script" $ do
+        let code = [i| (try (import './script-with-error)) |]
+        result <- runWithMocks $ do
+          expect $ LoadScriptToAST "./script-with-error" |-> Left "Invalid script"
+          evalExpr code
+        result
+          `shouldBe` Right
+            [ mkResultVal
+                (mkErrorVal (ValQuoted (ExprSymbol NullSpan "import-error")) (ValString "Invalid script"))
+                ValNil
+            ]
+
+      it "stops importing the other scripts in the sequence" $ do
+        let code = [i| (try (import 'script-with-error 'second-script)) |]
+        result <- runWithMocks $ do
+          expect $ LoadScriptToAST "script-with-error" |-> Left "Invalid script"
+          evalExpr code
+        result
+          `shouldBe` Right
+            [ mkResultVal
+                (mkErrorVal (ValQuoted (ExprSymbol NullSpan "import-error")) (ValString "Invalid script"))
+                ValNil
+            ]

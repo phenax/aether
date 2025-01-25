@@ -4,9 +4,9 @@ import Aether.Runtime.LangIO (LangIOT (runLangIOT))
 import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupSymbol, mkScope, updateSymbolValue)
 import Aether.Runtime.Value
 import Aether.Types
-import Control.Monad ((>=>))
+import Control.Monad (forM_, (>=>))
 import Control.Monad.Except (ExceptT, MonadError (catchError, throwError), runExceptT)
-import Control.Monad.State.Strict (MonadIO, MonadState, StateT (runStateT), gets, modify')
+import Control.Monad.State.Strict (MonadIO, MonadState (get, put), StateT (runStateT), gets, modify')
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import qualified Debug.Trace as Debug
@@ -52,8 +52,20 @@ builtins =
         ("try", builtinTry),
         ("error!", builtinError),
         ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"])),
-        ("!", builtinExecCommand)
+        ("!", builtinExecCommand),
+        ("import", builtinLoadScript)
       ]
+
+builtinLoadScript :: [Expr] -> Evaluator m EvalValue
+builtinLoadScript scriptPathsE = do
+  forM_ scriptPathsE $ \scriptPathE -> do
+    scriptPath <- showEvalValueAsString <$> interpretExpression scriptPathE
+    exprs <- loadScriptToAST scriptPath
+    case exprs of
+      Right ast -> mapM interpretExpression ast
+      Left err ->
+        throwError $ UserError (ValQuoted $ ExprSymbol NullSpan "import-error") (ValString err)
+  pure ValNil
 
 toCommand :: EvalValue -> Maybe (String, [String])
 toCommand (ValQuoted (ExprSymList _ (cmd : args))) = Just (showExprAsString cmd, map showExprAsString args)

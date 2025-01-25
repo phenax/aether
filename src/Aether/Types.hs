@@ -104,6 +104,7 @@ instance Monoid EvalEnvironment where
 class (Monad m) => MonadLangIO m where
   putStringToScreen :: String -> m ()
   execCommand :: String -> [String] -> m (ExitCode, Text.Text, Text.Text)
+  loadScriptToAST :: FilePath -> m (Either String [Expr])
 
 type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m a
 

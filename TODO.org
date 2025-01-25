@@ -20,6 +20,7 @@
   - [x] Use Seq for stack
   - [x] Exec commands
   - [ ] Load/import file
+  - [ ] Import caching
   - [ ] Spawning processes + pipes
   - [ ] Operations on string
   - [ ] Operations on symbols (from/to symbol)

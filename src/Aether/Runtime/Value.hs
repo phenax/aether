@@ -96,3 +96,8 @@ showExprAsString :: Expr -> String
 showExprAsString (ExprSymList _ ls) = unwords (map showExpr ls)
 showExprAsString (ExprSymbol _ s) = s
 showExprAsString expr = showExpr expr
+
+showEvalValueAsString :: EvalValue -> String
+showEvalValueAsString (ValString s) = s
+showEvalValueAsString (ValQuoted e) = showExprAsString e
+showEvalValueAsString v = showEvalValue v
