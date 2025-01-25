@@ -90,7 +90,10 @@ instance Monoid EvalEnvironment where
   mempty =
     EvalEnvironment
       { envScopeId = 1,
-        envCallStack = Stack $ Seq.singleton $ Scope {scopeId = ScopeId 0, scopeTable = Map.empty}
+        envCallStack =
+          Stack
+            . Seq.singleton
+            $ Scope {scopeId = ScopeId 0, scopeTable = Map.empty}
       }
 
 class (Monad m) => MonadLangIO m where

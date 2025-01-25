@@ -1,7 +1,7 @@
 module Specs.Integration.StdlibSpec where
 
 import Aether.Runtime (runInterpreter)
-import Aether.Runtime.Value (mkErrorVal, mkResultVal)
+import Aether.Runtime.Value (mkErrorVal)
 import Aether.Syntax.Parser
 import Aether.Types
 import Data.String.Interpolate.IsString
@@ -257,36 +257,6 @@ test = do
           |]
           `shouldReturn` Right [ValNil, ValNil]
 
-  describe "builtin > type" $ do
-    it "returns correct types for given values" $ do
-      evalExpr
-        [i|
-          (type '(1 2 3))
-          (type '())
-          (type 200)
-          (type "hello")
-          (type 'hello)
-          (type '"hello world")
-          (type #T)
-          (type #nil)
-          (type (-> [] 20))
-          (type +)
-          (type if)
-        |]
-        `shouldReturn` Right
-          [ ValQuoted (ExprSymbol NullSpan "list"),
-            ValQuoted (ExprSymbol NullSpan "list"),
-            ValQuoted (ExprSymbol NullSpan "number"),
-            ValQuoted (ExprSymbol NullSpan "string"),
-            ValQuoted (ExprSymbol NullSpan "symbol"),
-            ValQuoted (ExprSymbol NullSpan "quote"),
-            ValQuoted (ExprSymbol NullSpan "boolean"),
-            ValQuoted (ExprSymbol NullSpan "list"),
-            ValQuoted (ExprSymbol NullSpan "function"),
-            ValQuoted (ExprSymbol NullSpan "function"),
-            ValQuoted (ExprSymbol NullSpan "macro")
-          ]
-
   describe "core > record" $ do
     it "creates constructor and property getters for given record" $ do
       evalExpr
@@ -415,65 +385,7 @@ test = do
         |]
         `shouldReturn` Right [ValNumber 41, ValNumber 41]
 
-  describe "builtin > error!/try" $ do
-    context "when expression raises an error" $ do
-      it "returns result with error" $ do
-        evalExpr
-          [i|
-            ; Have to use (quote 'division) instead of 'division due to a bug in macros
-            ; TODO: Fix that and replace it with 'division
-            (define (divide! a b)
-              (if (= b 0)
-                (error! (quote 'division-by-zero) "You divided by zero and died")
-                (/ a b)))
-
-            (try invalid-symbol)
-            (try (error! 'hello "World"))
-            (try (divide! 5 0))
-            (try (lt? 1 2 3))
-          |]
-          `shouldReturn` Right
-            [ ValNil,
-              mkResultVal
-                ( mkErrorVal
-                    (ValQuoted $ ExprSymbol NullSpan "symbol-not-found")
-                    (ValString "Symbol 'invalid-symbol is not defined")
-                )
-                ValNil,
-              mkResultVal
-                ( mkErrorVal
-                    (ValQuoted $ ExprSymbol NullSpan "hello")
-                    (ValString "World")
-                )
-                ValNil,
-              mkResultVal
-                ( mkErrorVal
-                    (ValQuoted $ ExprSymbol NullSpan "division-by-zero")
-                    (ValString "You divided by zero and died")
-                )
-                ValNil,
-              mkResultVal
-                ( mkErrorVal
-                    (ValQuoted $ ExprSymbol NullSpan "incorrect-argument-length")
-                    (ValString "Expected 2 arguments but got 3 (lt?)")
-                )
-                ValNil
-            ]
-    context "when expression does not raise an error" $ do
-      it "returns result without error" $ do
-        evalExpr
-          [i|
-            (try 20)
-            (try (+ 2 5))
-            (try (lt? (+ 3 4) 2))
-          |]
-          `shouldReturn` Right
-            [ mkResultVal ValNil $ ValNumber 20,
-              mkResultVal ValNil $ ValNumber 7,
-              mkResultVal ValNil $ ValBool False
-            ]
-
-  describe "builtin > Error/Result" $ do
+  describe "core > Error/Result" $ do
     context "when try returns an error result" $ do
       it "allow accessing error with getters" $ do
         evalExpr

@@ -1,0 +1,282 @@
+module Specs.Integration.BuiltinsSpec where
+
+import Aether.Runtime (envWithStdLib)
+import qualified Aether.Runtime.Interpreter as Runtime
+import Aether.Runtime.Value (mkErrorVal, mkResultVal)
+import Aether.Syntax.Parser
+import Aether.Types
+import Control.Monad.Except (MonadError, runExceptT)
+import Control.Monad.RWS (MonadIO (liftIO), MonadState, MonadTrans (lift))
+import Control.Monad.State (StateT (runStateT))
+import Data.String.Interpolate.IsString
+import Data.Text (Text)
+import Test.HMock (ExpectContext (expect), runMockT, (|->))
+import Test.Hspec
+import TestUtils
+import Text.Megaparsec (errorBundlePretty)
+
+evalExpr :: Text -> Evaluator m [EvalValue]
+evalExpr code = do
+  let results = parseAll "input" code
+  case results of
+    Right exprs -> mapM Runtime.interpretExpression exprs
+    Left e -> error $ errorBundlePretty e
+
+test :: SpecWith ()
+test = do
+  describe "builtin > type" $ do
+    it "returns correct types for given values" $ do
+      let code =
+            [i|
+          (type '(1 2 3))
+          (type '())
+          (type 200)
+          (type "hello")
+          (type 'hello)
+          (type '"hello world")
+          (type #T)
+          (type #nil)
+          (type (-> [] 20))
+          (type +)
+          (type if)
+        |]
+      result <- runWithMocks $ evalExpr code
+
+      result
+        `shouldBe` Right
+          [ ValQuoted (ExprSymbol NullSpan "list"),
+            ValQuoted (ExprSymbol NullSpan "list"),
+            ValQuoted (ExprSymbol NullSpan "number"),
+            ValQuoted (ExprSymbol NullSpan "string"),
+            ValQuoted (ExprSymbol NullSpan "symbol"),
+            ValQuoted (ExprSymbol NullSpan "quote"),
+            ValQuoted (ExprSymbol NullSpan "boolean"),
+            ValQuoted (ExprSymbol NullSpan "list"),
+            ValQuoted (ExprSymbol NullSpan "function"),
+            ValQuoted (ExprSymbol NullSpan "function"),
+            ValQuoted (ExprSymbol NullSpan "macro")
+          ]
+
+  describe "builtin > error!/try" $ do
+    context "when expression raises an error" $ do
+      it "returns result with error" $ do
+        let code =
+              [i|
+            ; Have to use (quote 'division) instead of 'division due to a bug in macros
+            ; TODO: Fix that and replace it with 'division
+            (define (divide! a b)
+              (if (= b 0)
+                (error! (quote 'division-by-zero) "You divided by zero and died")
+                (/ a b)))
+
+            (try invalid-symbol)
+            (try (error! 'hello "World"))
+            (try (divide! 5 0))
+            (try (lt? 1 2 3))
+          |]
+        result <- runWithMocks $ evalExpr code
+
+        result
+          `shouldBe` Right
+            [ ValNil,
+              mkResultVal
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "symbol-not-found")
+                    (ValString "Symbol 'invalid-symbol is not defined")
+                )
+                ValNil,
+              mkResultVal
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "hello")
+                    (ValString "World")
+                )
+                ValNil,
+              mkResultVal
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "division-by-zero")
+                    (ValString "You divided by zero and died")
+                )
+                ValNil,
+              mkResultVal
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "incorrect-argument-length")
+                    (ValString "Expected 2 arguments but got 3 (lt?)")
+                )
+                ValNil
+            ]
+    context "when expression does not raise an error" $ do
+      it "returns result without error" $ do
+        let code =
+              [i|
+            (try 20)
+            (try (+ 2 5))
+            (try (lt? (+ 3 4) 2))
+          |]
+        result <- runWithMocks $ evalExpr code
+
+        result
+          `shouldBe` Right
+            [ mkResultVal ValNil $ ValNumber 20,
+              mkResultVal ValNil $ ValNumber 7,
+              mkResultVal ValNil $ ValBool False
+            ]
+
+  describe "builtins > progn" $ do
+    context "evaluates expression sequentially in current scope" $ do
+      it "defines value in current scope" $ do
+        let code =
+              [i|
+            (define foobar 10)
+            foobar
+            (progn
+              (define foobar (+ foobar 5))
+              foobar)
+            foobar
+          |]
+        result <- runWithMocks $ evalExpr code
+
+        result
+          `shouldBe` Right
+            [ValNil, ValNumber 10, ValNumber 15, ValNumber 15]
+
+  describe "builtins > define" $ do
+    context "when defining value" $ do
+      it "defines value in current scope" $ do
+        let code =
+              [i|
+            (define foobar "outside")
+            (define (scope)
+              (define foobar "inside lambda")
+              foobar)
+
+            (do
+              (define foobar "inside do")
+              foobar)
+            (scope)
+            foobar
+          |]
+        result <- runWithMocks $ evalExpr code
+
+        result
+          `shouldBe` Right
+            [ ValNil,
+              ValNil,
+              ValString "inside do",
+              ValString "inside lambda",
+              ValString "outside"
+            ]
+
+    context "when defining lambda" $ do
+      it "lambda uses scope where it was defined" $ do
+        let code =
+              [i|
+            (define (bar foobar) (foobar 5))
+            (define (foo foobar) (bar (-> [x] (+ foobar x))))
+            (foo 200)
+          |]
+        result <- runWithMocks $ evalExpr code
+
+        result
+          `shouldBe` Right
+            [ValNil, ValNil, ValNumber 205]
+
+    context "when defining lambda with variable number of arguments" $ do
+      it "allows accepting a variable number of arguments" $ do
+        let code =
+              [i|
+            (define (foo a b c ... rest)
+              (list a b c rest))
+            (foo 1 2 3 4 5 6 7)
+          |]
+        result <- runWithMocks $ evalExpr code
+
+        result
+          `shouldBe` Right
+            [ ValNil,
+              ValQuoted $
+                ExprSymList
+                  dummySpan
+                  [ ExprValue (ValNumber 1),
+                    ExprValue (ValNumber 2),
+                    ExprValue (ValNumber 3),
+                    ExprValue $
+                      ValQuoted $
+                        ExprSymList
+                          dummySpan
+                          [ ExprValue (ValNumber 4),
+                            ExprValue (ValNumber 5),
+                            ExprValue (ValNumber 6),
+                            ExprValue (ValNumber 7)
+                          ]
+                  ]
+            ]
+
+  describe "builtins > set" $ do
+    context "when setting a new value" $ do
+      it "defines value in current scope" $ do
+        let code =
+              [i|
+            (set a "outside")
+
+            (do
+              (set b "inside")
+              b)
+            a
+            (try b)
+          |]
+        result <- runWithMocks $ evalExpr code
+
+        result
+          `shouldBe` Right
+            [ ValNil,
+              ValString "inside",
+              ValString "outside",
+              mkResultVal
+                ( mkErrorVal
+                    (ValQuoted $ ExprSymbol NullSpan "symbol-not-found")
+                    (ValString "Symbol 'b is not defined")
+                )
+                ValNil
+            ]
+
+    context "when updating a value set in the scope above" $ do
+      it "updates value in the previous scope" $ do
+        let code =
+              [i|
+            (set foobar "outside")
+            (define (scope)
+              (set foobar "inside lambda")
+              foobar)
+
+            foobar
+            (do
+              (set foobar "inside do")
+              foobar)
+            (scope)
+            foobar
+          |]
+        result <- runWithMocks $ evalExpr code
+
+        result
+          `shouldBe` Right
+            [ ValNil,
+              ValNil,
+              ValString "outside",
+              ValString "inside do",
+              ValString "inside lambda",
+              ValString "inside lambda"
+            ]
+
+  describe "builtin > displayNl" $ do
+    it "prints given arguments to screen" $ do
+      let code =
+            [i|
+        (displayNl 42 "--" '(1 2))
+         |]
+      result <- runWithMocks $ do
+        expect $ PutStringToScreen "42.0" |-> ()
+        expect $ PutStringToScreen "--" |-> ()
+        expect $ PutStringToScreen "'(1.0 2.0)" |-> ()
+        expect $ PutStringToScreen "\n" |-> ()
+        evalExpr code
+      result `shouldBe` Right [ValNil]

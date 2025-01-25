@@ -1,5 +1,6 @@
 module Main (main) where
 
+import qualified Specs.Integration.BuiltinsSpec
 import qualified Specs.Integration.InterpreterSpec
 import qualified Specs.Integration.StdlibSpec
 import qualified Specs.InterpreterSpec
@@ -13,5 +14,6 @@ main = hspec $ do
   Specs.InterpreterSpec.test
   Specs.Integration.InterpreterSpec.test
   Specs.Integration.StdlibSpec.test
+  Specs.Integration.BuiltinsSpec.test
   Specs.ScopeSpec.test
   pure ()
