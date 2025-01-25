@@ -139,6 +139,7 @@ interpretExpression = \case
       expandSymList (ValQuoted (ExprSymList _ exprs)) = pure exprs
       expandSymList (ValQuoted (ExprQuoted _ (ExprSymList _ exprs))) = pure exprs
       expandSymList (ValQuoted sym@(ExprSymbol _ _)) = interpretExpression sym >>= expandSymList
+      expandSymList ValNil = pure []
       expandSymList e = pure [ExprValue e]
 
 builtinQuote :: [Expr] -> Evaluator m EvalValue

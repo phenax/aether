@@ -196,6 +196,26 @@ test = do
                   (ExprSymList dummySpan [ExprSymbol dummySpan "hello", ExprValue (ValNumber 200), ExprSymbol dummySpan "world", ExprValue (ValNumber 200)])
               ]
 
+      context "when quote contains spliced unquote with #nil" $ do
+        it "adds no elements" $ do
+          evalExpr
+            [i|
+              (define value #nil)
+              '(hello ,@value world ,value 123)
+            |]
+            `shouldReturn` Right
+              [ ValNil,
+                ValQuoted
+                  ( ExprSymList
+                      dummySpan
+                      [ ExprSymbol dummySpan "hello",
+                        ExprSymbol dummySpan "world",
+                        ExprValue ValNil,
+                        ExprLiteral dummySpan (LitNumber 123)
+                      ]
+                  )
+              ]
+
       context "with nested unquotes" $ do
         it "nested unquotes" $ do
           evalExpr
