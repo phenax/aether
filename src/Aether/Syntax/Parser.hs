@@ -28,6 +28,14 @@ spaceConsumer = L.space P.space1 singleLineComment multiLineComment
     singleLineComment = L.skipLineComment ";"
     multiLineComment = L.skipBlockComment "#|" "|#"
 
+parseWithSpan :: Parser a -> Parser (SourceSpan, a)
+parseWithSpan parser = do
+  spaceConsumer
+  (start, result, end) <-
+    (,,) <$> getSourcePos <*> parser <*> getSourcePos
+  spaceConsumer
+  pure (SourceSpan start end, result)
+
 instance Parsable Literal where
   parse = boolP <|> nilP <|> stringP <|> numberP
     where
@@ -46,14 +54,6 @@ instance Parsable Literal where
       stringP =
         LitString <$> do
           P.between (P.char '"') (P.char '"') $ P.many (P.satisfy (/= '"'))
-
-parseWithSpan :: Parser a -> Parser (SourceSpan, a)
-parseWithSpan parser = do
-  spaceConsumer
-  (start, result, end) <-
-    (,,) <$> getSourcePos <*> parser <*> getSourcePos
-  spaceConsumer
-  pure (SourceSpan start end, result)
 
 instance Parsable Expr where
   parse =
@@ -81,7 +81,7 @@ instance Parsable Expr where
           identChar = P.satisfy $ \c -> isAlphaNum c || c `elem` validIdentSpecialChars
 
 instance Parsable [Expr] where
-  parse = P.manyTill parse P.eof
+  parse = P.many parse
 
 parseAll :: String -> Text -> Either ParseError [Expr]
-parseAll = P.runParser parse
+parseAll = P.runParser (parse <* P.eof)

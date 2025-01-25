@@ -18,14 +18,19 @@
   - [x] De-structuring macro, `(expand (a b c) (list 1 2 3))`
   - [x] Fix updating symbols `set`/`define`
   - [x] Optimize closure evaluation
-  - [ ] Allow empty files
+  - [ ] Parser: allow empty files
+  - [ ] Load/import file
+  - [ ] Shell commands
+  - [ ] Operations on string
+  - [ ] Operations on symbols (from/to symbol)
   - [ ] BUG: Fix issue with macro return value
       - When arg of macro returns an s-expr containing a symbol as argument, it gets evaluated (in if)
       - Maybe prevent arg to macros from becoming unquoted?
-  - [ ] Operations on string
-  - [ ] Stack trace first class value
+  - [ ] Stack trace info first class value
   - [ ] Shortcircuiting for &&, ||
   - [ ] Cleanup your shitty spec
+  - [ ] Optimize list stdlib
+  - [ ] CLI arguments (passed to `aether run`)
 
 * Later
   - [ ] Repl
@@ -35,7 +40,6 @@
   - [ ] Type validation util
   - [ ] `(assoc obj ':name "value")`
   - [ ] Optional properties
-  - [ ] Shell commands
   - [ ] require other modules
   - [ ] Optional arguments?
   - [ ] Optimize interpreter perfomance

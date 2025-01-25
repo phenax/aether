@@ -19,31 +19,34 @@ There is no help menu. I don't care about you.
 
 
 ## Examples
-Some normal stuff you can do in aether so far.
+Some normal stuff you can do in aether so far. 
 Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 
 ### Functions
 ```scheme
 (define (factorial n)
   (if (<= n 1) 1
-     (factorial (- n 1))))
+    (factorial (- n 1))))
 
 (displayNl (factorial 20))
 
-(for (range 0 10) (-> [n]
-  (displayNl (cons n (factorial n)))))
+(for (range 0 10) { -> [n]
+  (displayNl n "! is " (factorial n)) })
+; `()`, `[]`, `{}` are the same thing as you'd expect
 ```
 
 ### Macros
 ```scheme
 (defmacro (when condition ... blocks)
   '(if ,condition
-    (apply do ,@blocks)
+    (do ,@blocks)
     #nil))
 
 (set n 5)
 (when (= n 5)
-  (displayNl "N is 5 and everyone you love will die some day! Yay!"))
+  (set yay "Yay!")
+  (displayNl "N is 5 and everyone you love will die some day! " yay)
+  (displayNl "Good bye"))
 ```
 
 ### Error handling
@@ -57,13 +60,13 @@ Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 
 (cond
   [ (nil? error)
-      (displayNl "Result: " value) ]
+      { displayNl "Result: " value } ]
 
   [ (= 'division-by-zero (error/label error))
-      (displayNl "DivByZero error: " (error/message error)) ]
+      { displayNl "DivByZero error: " (error/message error) } ]
 
   [ else
-      (displayNl "Unexpected error: " (error/message error)) ])
+      { displayNl "Unexpected error: " (error/message error) } ])
 ```
 
 ### Infix syntax
@@ -80,8 +83,12 @@ Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 ```scheme
 (set nums (list 1 2 3 4 5))
 (|> nums
-  (_^ 'map (-> [x] (* x 2)))  ; x2
-  (_^ 'fold + 0))             ; sum them all
+  (_^ map (-> [x] (* x 2)))  ; curried map x2
+  reverse                    ; reverse list
+  (^_ for displayNl))       ; display each item
+
+; _^ is curry second (same as `curry`): ((a, b) -> c) -> a -> b -> c
+; ^_ is curry first: ((a, b) -> c) -> b -> a -> c
 ```
 
 ### Records
