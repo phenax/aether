@@ -349,3 +349,29 @@ test = describe "builtin" $ do
         expect $ GetArgs |-> ["1", "2"]
         evalExpr code
       result `shouldBe` Right [ValQuoted $ ExprSymList NullSpan [ExprValue $ ValString "1", ExprValue $ ValString "2"]]
+
+  describe "#string" $ do
+    it "concatenates all values as string" $ do
+      let code = [i| (string 1 2 "hello" 'world-symbol) |]
+      result <- runWithMocks $ evalExpr code
+      result `shouldBe` Right [ValString "12helloworld-symbol"]
+
+  describe "#make-symbol" $ do
+    it "converts value into a symbol" $ do
+      let code =
+            [i|
+        (make-symbol "hello/world")
+        (make-symbol 28)
+      |]
+      result <- runWithMocks $ evalExpr code
+      result
+        `shouldBe` Right
+          [ ValQuoted $ ExprSymbol NullSpan "hello/world",
+            ValQuoted $ ExprSymbol NullSpan "28"
+          ]
+
+    context "when number of args is not 1" $ do
+      it "throws argument length error" $ do
+        let code = [i| (make-symbol 1 2 "wow") |]
+        result <- runWithMocks $ evalExpr code
+        result `shouldBe` Left (ArgumentLengthError True 1 3 "make-symbol")

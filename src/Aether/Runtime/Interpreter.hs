@@ -7,6 +7,7 @@ import Aether.Types
 import Control.Monad (forM_, (>=>))
 import Control.Monad.Except (ExceptT, MonadError (catchError, throwError), runExceptT)
 import Control.Monad.State.Strict (MonadIO, MonadState, StateT (runStateT), gets, modify')
+import Data.Foldable (Foldable (foldl'))
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
 import GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
@@ -53,12 +54,25 @@ builtins =
         ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"])),
         ("!", builtinExecCommand),
         ("import", builtinLoadScript),
+        ("string", builtinString),
+        ("make-symbol", builtinMakeSymbol),
         ("get-args", builtinGetArgs)
       ]
 
 builtinGetArgs :: [Expr] -> Evaluator m EvalValue
 builtinGetArgs _ =
   ValQuoted . ExprSymList NullSpan . fmap (ExprValue . ValString) <$> getArgs
+
+builtinString :: [Expr] -> Evaluator m EvalValue
+builtinString exprs = do
+  values :: [EvalValue] <- interpret exprs
+  pure $ ValString $ concatMap showEvalValueAsString values
+
+builtinMakeSymbol :: [Expr] -> Evaluator m EvalValue
+builtinMakeSymbol [expr] = do
+  value <- interpret expr
+  pure . ValQuoted . ExprSymbol NullSpan $ showEvalValueAsString value
+builtinMakeSymbol args = throwError $ ArgumentLengthError True 1 (length args) "make-symbol"
 
 builtinLoadScript :: [Expr] -> Evaluator m EvalValue
 builtinLoadScript scriptPathsE = do
