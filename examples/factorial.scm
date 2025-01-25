@@ -11,6 +11,7 @@
 
 (displayNl results)
 
+(displayNl (get-args))
 
 ; Run a command
 ;; (display (! ls -la))

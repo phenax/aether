@@ -52,8 +52,13 @@ builtins =
         ("error!", builtinError),
         ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"])),
         ("!", builtinExecCommand),
-        ("import", builtinLoadScript)
+        ("import", builtinLoadScript),
+        ("get-args", builtinGetArgs)
       ]
+
+builtinGetArgs :: [Expr] -> Evaluator m EvalValue
+builtinGetArgs _ =
+  ValQuoted . ExprSymList NullSpan . fmap (ExprValue . ValString) <$> getArgs
 
 builtinLoadScript :: [Expr] -> Evaluator m EvalValue
 builtinLoadScript scriptPathsE = do

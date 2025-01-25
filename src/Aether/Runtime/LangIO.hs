@@ -5,7 +5,9 @@ import Aether.Types
 import Control.Monad.Error.Class (MonadError)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.RWS (MonadState, MonadTrans (lift))
+import Data.List (elemIndex)
 import Data.Text.IO (hGetContents, readFile)
+import qualified System.Environment as Environment
 import System.Process (CreateProcess (..), StdStream (..))
 import qualified System.Process as Proc
 import Text.Megaparsec.Error (errorBundlePretty)
@@ -43,3 +45,8 @@ instance (MonadIO m) => MonadLangIO (LangIOT m) where
     code <- readFile filePath
     let parserResult = Parser.parseAll filePath code
     pure $ either (Left . errorBundlePretty) Right parserResult
+
+  getArgs = lift . liftIO $ do
+    args <- Environment.getArgs
+    let sepIndexM = elemIndex "--" args
+    pure $ maybe [] ((`drop` args) . (+ 1)) sepIndexM

@@ -341,3 +341,11 @@ test = describe "builtin" $ do
                 (mkErrorVal (ValQuoted (ExprSymbol NullSpan "import-error")) (ValString "Invalid script"))
                 ValNil
             ]
+
+  describe "#get-args" $ do
+    it "gets cli args" $ do
+      let code = [i| (get-args) |]
+      result <- runWithMocks $ do
+        expect $ GetArgs |-> ["1", "2"]
+        evalExpr code
+      result `shouldBe` Right [ValQuoted $ ExprSymList NullSpan [ExprValue $ ValString "1", ExprValue $ ValString "2"]]
