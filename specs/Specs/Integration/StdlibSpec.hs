@@ -314,6 +314,34 @@ test = describe "stdlib" $ do
             ValNumber 25
           ]
 
+    it "creates setter to update properties immutably" $ do
+      evalExpr
+        [i|
+          (record Person
+            :name
+            :age
+            :hobbies)
+          (define john (Person "John" 25 '[]))
+
+          (set@:name "Johnathy" john)
+          (set@:age 26 john)
+          (set@:hobbies (list "eating") john)
+        |]
+        `shouldReturn` Right
+          [ ValNil,
+            ValNil,
+            ValQuoted (ExprSymList NullSpan [ExprValue (ValString "Johnathy"), ExprValue (ValNumber 25.0), ExprValue ValNil]),
+            ValQuoted (ExprSymList NullSpan [ExprValue (ValString "John"), ExprValue (ValNumber 26.0), ExprValue ValNil]),
+            ValQuoted
+              ( ExprSymList
+                  NullSpan
+                  [ ExprValue (ValString "John"),
+                    ExprValue (ValNumber 25.0),
+                    ExprValue (ValQuoted (ExprSymList NullSpan [ExprValue (ValString "eating")]))
+                  ]
+              )
+          ]
+
   describe "#elem-at" $ do
     it "returns element at index in a list" $ do
       evalExpr
@@ -509,4 +537,74 @@ test = describe "stdlib" $ do
               ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 500, ExprValue ValNil],
               ValNil,
               ValQuoted $ ExprSymList NullSpan [ExprValue $ ValString "hello", ExprValue ValNil]
+            ]
+
+  describe "#take" $ do
+    it "returns n items from start of list" $ do
+      evalExpr
+        [i| (take 2 '(1 2 3)) |]
+        `shouldReturn` Right
+          [ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 2]]
+
+    context "when count is greater than the length of list" $ do
+      it "returns the entrire list" $ do
+        evalExpr
+          [i| (take 5 '(1 2 3)) (take 5 '()) |]
+          `shouldReturn` Right
+            [ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 2, ExprValue $ ValNumber 3],
+              ValNil
+            ]
+
+    context "when count is negative or 0" $ do
+      it "returns empty list" $ do
+        evalExpr
+          [i| (take (- 1) '(1 2 3)) (take 0 '(1 2 3)) |]
+          `shouldReturn` Right [ValNil, ValNil]
+
+  describe "#drop" $ do
+    it "removes n items from start of list" $ do
+      evalExpr
+        [i| (drop 2 (list 1 2 3 4)) |]
+        `shouldReturn` Right
+          [ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 3, ExprValue $ ValNumber 4]]
+
+    context "when count is greater than the length of list" $ do
+      it "returns the entrire list" $ do
+        evalExpr [i| (drop 5 '(1 2 3)) (drop 5 '()) |]
+          `shouldReturn` Right [ValNil, ValNil]
+
+    context "when count is negative or 0" $ do
+      it "returns empty list" $ do
+        evalExpr [i| (drop (- 1) (list 1 2)) (drop 0 (list 1 2)) |]
+          `shouldReturn` Right
+            [ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 2],
+              ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 2]
+            ]
+
+  describe "#elem-update" $ do
+    it "updates item at given index and returns copy" $ do
+      evalExpr
+        [i|
+          (elem-update (-> [n] (string "updated" n)) 0 (list 1 2 3))
+          (elem-update (-> [n] (string "updated" n)) 1 (list 1 2 3))
+          (elem-update (-> [n] (string "updated" n)) 2 (list 1 2 3))
+        |]
+        `shouldReturn` Right
+          [ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValString "updated1", ExprValue $ ValNumber 2, ExprValue $ ValNumber 3],
+            ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValString "updated2", ExprValue $ ValNumber 3],
+            ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 2, ExprValue $ ValString "updated3"]
+          ]
+
+    context "when index is out of bounds" $ do
+      it "returns original list" $ do
+        evalExpr
+          [i|
+            (elem-update (-> [n] (string "updated" n)) 9 (list 1 2 3))
+            (elem-update (-> [n] (string "updated" n)) (- 1) (list 1 2 3))
+            (elem-update (-> [n] (string "updated" n)) 9 '())
+          |]
+          `shouldReturn` Right
+            [ ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 2, ExprValue $ ValNumber 3],
+              ValQuoted $ ExprSymList NullSpan [ExprValue $ ValNumber 1, ExprValue $ ValNumber 2, ExprValue $ ValNumber 3],
+              ValNil
             ]

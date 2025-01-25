@@ -91,11 +91,17 @@
 ;;   (displayNl (:gender john))
 (defmacro (record type-name ... properties)
   (define (mk-get index) (-> [obj] (elem-at index obj)))
+  (define (mk-set index) (-> [value obj]
+     (elem-update (-> [] value) index obj)))
 
   '(progn
     ,(list define type-name list)
     ,@(zip-with
-        (-> [prop index] (list 'define prop (mk-get index)))
+        (-> [prop index] (list 'progn
+            (list 'define prop (mk-get index))
+            (list 'define
+              (make-symbol (string "set@" prop))
+              (mk-set index))))
         properties
         (indexes properties))))
 

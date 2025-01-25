@@ -54,6 +54,7 @@
     (cons start (range (+ start 1) end))))
 
 (define (indexes ls) (range 0 (- (length ls) 1)))
+(define (map-indexed fn ls) (zip-with fn ls (range 0 (- (length ls) 1))))
 
 (define (elem-at index ls)
   (cond
@@ -78,4 +79,24 @@
   (index-of-in value ls 0))
 
 (define (contains? value ls) (not (eq? (index-of value ls) #nil)))
+
+(define (take n ls)
+  (cond
+    [ (<= n 0)     #nil ]
+    [ (empty? ls)  #nil ]
+    [ else         (cons (car ls) (take (- n 1) (cdr ls))) ]))
+
+(define (drop n ls)
+  (cond
+    [ (<= n 0)     ls ]
+    [ (empty? ls)  #nil ]
+    [ else         (drop (- n 1) (cdr ls)) ]))
+
+(define (elem-update fn index ls)
+  (define (mapper item item-index)
+    (if (= index item-index)
+      (fn item index)
+      item))
+
+  (map-indexed mapper ls))
 
