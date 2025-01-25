@@ -24,15 +24,21 @@ Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 
 ### Functions
 ```scheme
-(define (factorial n)
-  (if (<= n 1) 1
-    (factorial (- n 1))))
+(define (factorial num)
+  (if (<= num 1) 1
+    (* num (factorial (- num 1)))))
 
-(displayNl (factorial 20))
+(displayNl (factorial 5))
 
-(for (range 0 10) { -> [n]
-  (displayNl n "! is " (factorial n)) })
-; `()`, `[]`, `{}` are the same thing as you'd expect
+(set results '[])
+(for (range 10 20) { -> [n]
+  (let [ (result (factorial n)) ]
+    (set results (concat results result))
+    (displayNl n "! is " result))
+})
+
+(displayNl results)
+; `()`, `[]`, `{}` are the same thing
 ```
 
 ### Macros

@@ -37,17 +37,20 @@
   (fold (-> [result val] (cons val result)) '[] ls))
 
 (define (map fn ls)
-  (reverse
-    (fold
-      (-> [result val] (cons (fn val) result))
-      '[]
-      ls)))
+  (if (empty? ls) #nil
+    (cons
+      (fn (car ls))
+      (map fn (cdr ls)))))
 
-(define (for ls fn) (map fn ls) #nil)
+(define (for ls fn)
+  (if (empty? ls) #nil
+    (progn
+      (fn (car ls))
+      (for (cdr ls) fn))))
+(define (each fn ls) (for ls fn))
 
 (define (range start end)
-  (if (gt? start end)
-    '()
+  (if (gt? start end) '[]
     (cons start (range (+ start 1) end))))
 
 (define (indexes ls) (range 0 (- (length ls) 1)))

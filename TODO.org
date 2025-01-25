@@ -18,7 +18,6 @@
   - [x] De-structuring macro, `(expand (a b c) (list 1 2 3))`
   - [x] Fix updating symbols `set`/`define`
   - [x] Optimize closure evaluation
-  - [ ] Parser: allow empty files
   - [ ] Load/import file
   - [ ] Shell commands
   - [ ] Operations on string
@@ -30,6 +29,7 @@
   - [ ] Shortcircuiting for &&, ||
   - [ ] Cleanup your shitty spec
   - [ ] Optimize list stdlib
+  - [ ] Parser: allow empty files
   - [ ] CLI arguments (passed to `aether run`)
 
 * Later

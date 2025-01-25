@@ -13,7 +13,7 @@ deriving instance (MonadState s m) => MonadState s (LangIOT m)
 deriving instance (MonadError e m) => MonadError e (LangIOT m)
 
 instance (MonadIO m) => MonadLangIO (LangIOT m) where
-  putStringToScreen = LangIOT . liftIO . putStr
+  putStringToScreen = lift . liftIO . putStr
 
 instance MonadTrans LangIOT where
   lift = LangIOT

@@ -1,16 +1,12 @@
 module Specs.Integration.BuiltinsSpec where
 
-import Aether.Runtime (envWithStdLib)
 import qualified Aether.Runtime.Interpreter as Runtime
 import Aether.Runtime.Value (mkErrorVal, mkResultVal)
 import Aether.Syntax.Parser
 import Aether.Types
-import Control.Monad.Except (MonadError, runExceptT)
-import Control.Monad.RWS (MonadIO (liftIO), MonadState, MonadTrans (lift))
-import Control.Monad.State (StateT (runStateT))
 import Data.String.Interpolate.IsString
 import Data.Text (Text)
-import Test.HMock (ExpectContext (expect), runMockT, (|->))
+import Test.HMock (ExpectContext (expect), (|->))
 import Test.Hspec
 import TestUtils
 import Text.Megaparsec (errorBundlePretty)

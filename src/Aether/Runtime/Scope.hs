@@ -65,7 +65,8 @@ closure targetScope (Stack {stack = closureStack}) eval = do
       where
         targetStack = closureStack :|> targetScope
         currentStack = stack $ envCallStack env
-        mergedStack = joinCommonScopes (<>) targetStack currentStack
+        mergedStack = joinCommonScopes joinScope targetStack currentStack
+        joinScope closureS callerS = callerS <> closureS
 
     popStack oldStack env = env {envCallStack = Stack closureScopePoppedStack}
       where

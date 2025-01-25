@@ -80,6 +80,40 @@ test = do
             ValNil
           ]
 
+  describe "core > for" $ do
+    it "iterates over list of items" $ do
+      evalExpr
+        [i|
+          (set out '[])
+          (for '[1 2 3] {-> [x]
+            (displayNl x)
+            (let [ (double (* x 2)) ]
+              (set out (concat out double)))
+          })
+          out
+        |]
+        `shouldReturn` Right
+          [ ValNil,
+            ValNil,
+            ValQuoted $ ExprSymList NullSpan [ExprValue (ValNumber 2), ExprValue (ValNumber 4), ExprValue (ValNumber 6)]
+          ]
+
+  describe "core > each" $ do
+    it "iterates over list of items" $ do
+      evalExpr
+        [i|
+          (set out '[])
+          (each
+            {-> [x] (set out (concat out (* x 2)))}
+            '[1 2 3])
+          out
+        |]
+        `shouldReturn` Right
+          [ ValNil,
+            ValNil,
+            ValQuoted $ ExprSymList NullSpan [ExprValue (ValNumber 2), ExprValue (ValNumber 4), ExprValue (ValNumber 6)]
+          ]
+
   describe "core > null?" $ do
     context "when list is empty" $ do
       it "returns true" $ do
