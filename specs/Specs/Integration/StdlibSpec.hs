@@ -46,6 +46,46 @@ test = describe "stdlib" $ do
         |]
         `shouldReturn` Right [ValNumber 9, ValNumber 4]
 
+  describe "#when" $ do
+    it "evalutes expressions only if first values is true" $ do
+      evalExpr
+        [i|
+          (set is-true #F)
+
+          (when #F (set is-true #T) 9)
+          is-true
+
+          (when #T (set is-true #T) 9)
+          is-true
+        |]
+        `shouldReturn` Right
+          [ ValNil,
+            ValNil,
+            ValBool False,
+            ValNumber 9,
+            ValBool True
+          ]
+
+  describe "#unless" $ do
+    it "evalutes expressions only if first values is false" $ do
+      evalExpr
+        [i|
+          (set is-true #F)
+
+          (unless #T (set is-true #T) 9)
+          is-true
+
+          (unless #F (set is-true #T) 9)
+          is-true
+        |]
+        `shouldReturn` Right
+          [ ValNil,
+            ValNil,
+            ValBool False,
+            ValNumber 9,
+            ValBool True
+          ]
+
   describe "#fold" $ do
     it "folds list of items" $ do
       evalExpr

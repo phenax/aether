@@ -40,6 +40,22 @@
 (defmacro (if bool then else)
   '(,bool ,then ,else))
 
+;; When conditional
+;; Example:
+;;   (when (= n 5)
+;;     (displayNl "N is 5 and everyone you love will die some day! Yay!")
+;;     (displayNl "Good bye"))
+(defmacro (when condition ... exprs)
+  '(,condition (progn ,@exprs) #nil))
+
+;; Unless conditional
+;; Example:
+;;   (unless (= n 5)
+;;     (displayNl "N is definitly not 5 and everyone you love will still die some day")
+;;     (displayNl "Good bye"))
+(defmacro (unless condition ... exprs)
+  '(,condition #nil (progn ,@exprs)))
+
 ;; Let bindings
 ;; Example:
 ;;   (let [ (value1 200) (value2 50) ]

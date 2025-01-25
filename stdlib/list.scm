@@ -6,6 +6,10 @@
 (define empty? null?)
 (define (list? ls) (eq? (type ls) 'list))
 
+(define (not-null? x) (not (null? x)))
+(define not-nil? not-null?)
+(define not-empty? not-null?)
+
 (define (cadr ls) (car (cdr ls)))
 (define (caddr ls) (cadr (cdr ls)))
 (define first car)
