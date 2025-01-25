@@ -24,6 +24,10 @@ Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 
 
 ### Functions
+`define` is used to define functions `(define (symbol ... args) ... exprs)`.
+
+It can also be used to define values `(define symbol value)`
+
 ```scheme
 (define (factorial num)
   (if (<= num 1) 1
@@ -44,10 +48,11 @@ Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 
 
 ### Macros
+
 ```scheme
-(defmacro (when condition ... blocks)
+(defmacro (when condition ... exprs)
   '(if ,condition
-    (do ,@blocks)
+    (progn ,@exprs)
     #nil))
 
 (set n 5)
@@ -59,6 +64,10 @@ Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 
 
 ### Error handling
+`try` function handles errors in expressions inside it and returns `'(error value)`. `(try (error-prone-code))`
+
+`error!` function is used to throw exceptions. `(error! 'error-identifier "Error message")`
+
 ```scheme
 (define (divide! a b)
   (if (zero? b)
@@ -69,37 +78,41 @@ Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 
 (cond
   [ (nil? error)
-      { displayNl "Result: " value } ]
+      {displayNl "Result: " value} ]
 
   [ (= 'division-by-zero (error/label error))
-      { displayNl "DivByZero error: " (error/message error) } ]
+      {displayNl "DivByZero error: " (error/message error)} ]
 
   [ else
-      { displayNl "Unexpected error: " (error/message error) } ])
+      {displayNl "Unexpected error: " (error/message error)} ])
 ```
 
 
 ### Process handling
+`!` function spawns a process and waits for it to end. Returns `'(stdout stderrr)`.
+
+On non-zero exit code, it throws an error `(error! 'proc/non-zero-exit-code "... <stderr>")`
+
 ```scheme
 ; Example: Takes a screenshot of the screen of the focussed window and saves it in given directory
 (expand [window-id, _] (! xdotool getwindowfocus)) ; expand macro destructures list into symbols
 (! import -window ,window-id "/home/user/Pictures")
-
-; !: Waits for process to end, returns '(stdout, stderrr)
-; Throws: on non-zero exit code 'proc/non-zero-exit-code "... <stderr>"
 
 ; WIP: Process handling + pipes
 ```
 
 
 ### Import scripts
-Imports script files relative to cwd (symbol and strings both work)
+`import` function imports script files, relative to cwd, into the current scope (symbol and strings both work).
+
 ```scheme
 (import 'path/to/script-file-1 "../foobar/script-file-2" "./path/to/script-file-3")
 ```
 
 
 ### Infix syntax
+Why not?
+
 ```scheme
 ; Always evaluated left to right. No fixity because fuck you
 ($ 5 + 4 * 3 - 2)      ; 25
@@ -108,6 +121,7 @@ Imports script files relative to cwd (symbol and strings both work)
 ($ 5 + ($ 4 * 3) - 2)  ; 15
 ; Equivalent to (- (+ 5 (* 4 3)) 2)
 ```
+
 
 ### Pipe/currying and other functional nerd stuff
 ```scheme
@@ -121,7 +135,10 @@ Imports script files relative to cwd (symbol and strings both work)
 ; ^_ is curry first: ((a, b) -> c) -> b -> a -> c
 ```
 
+
 ### Records
+`record` macro creates record structures. It's just a list with accessors so nothing fancy.
+
 ```scheme
 (record Person
   :person/name  ; :person/ is just for namespacing. Can be any symbol
@@ -131,6 +148,6 @@ Imports script files relative to cwd (symbol and strings both work)
 
 (displayNl (:person/name john) " is " (:person/age john) " years old")
 
-; NOTE: updating record properties has not been implemented yet
+; WIP: updating record properties has not been implemented yet
 ```
 

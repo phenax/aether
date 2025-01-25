@@ -10,7 +10,6 @@ import qualified Data.Sequence as Seq
 import qualified Data.Text as Text
 import Language.Haskell.TH.Lift (deriveLiftMany)
 import System.Exit (ExitCode)
-import qualified System.Process as Proc
 import Text.Megaparsec (Pos, SourcePos)
 
 type Name = String

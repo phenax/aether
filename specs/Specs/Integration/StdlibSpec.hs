@@ -9,14 +9,14 @@ import Test.Hspec
 import Text.Megaparsec (errorBundlePretty)
 
 test :: SpecWith ()
-test = do
+test = describe "stdlib" $ do
   let evalExpr code = do
         let results = parseAll "input" code
         case results of
           Right exprs -> runInterpreter exprs
           Left e -> error $ errorBundlePretty e
 
-  describe "core > math" $ do
+  describe "#math" $ do
     context "with overridden symbol for addition" $ do
       it "evaluates successfully" $ do
         evalExpr
@@ -37,7 +37,7 @@ test = do
           |]
           `shouldReturn` Right [ValNil, ValNumber (-26.0), ValNumber (-25.0)]
 
-  describe "core > if" $ do
+  describe "#if" $ do
     it "evaluates conditionals" $ do
       evalExpr
         [i|
@@ -46,7 +46,7 @@ test = do
         |]
         `shouldReturn` Right [ValNumber 9, ValNumber 4]
 
-  describe "core > fold" $ do
+  describe "#fold" $ do
     it "folds list of items" $ do
       evalExpr
         [i|
@@ -56,7 +56,7 @@ test = do
         |]
         `shouldReturn` Right [ValNumber 21, ValNumber 18, ValNumber 2]
 
-  describe "core > reverse" $ do
+  describe "#reverse" $ do
     it "reverses the list of items" $ do
       evalExpr
         [i|
@@ -68,7 +68,7 @@ test = do
             ValNil
           ]
 
-  describe "core > map" $ do
+  describe "#map" $ do
     it "maps over list of items" $ do
       evalExpr
         [i|
@@ -80,13 +80,12 @@ test = do
             ValNil
           ]
 
-  describe "core > for" $ do
+  describe "#for" $ do
     it "iterates over list of items" $ do
       evalExpr
         [i|
           (set out '[])
           (for '[1 2 3] {-> [x]
-            (displayNl x)
             (let [ (double (* x 2)) ]
               (set out (concat out double)))
           })
@@ -98,7 +97,7 @@ test = do
             ValQuoted $ ExprSymList NullSpan [ExprValue (ValNumber 2), ExprValue (ValNumber 4), ExprValue (ValNumber 6)]
           ]
 
-  describe "core > each" $ do
+  describe "#each" $ do
     it "iterates over list of items" $ do
       evalExpr
         [i|
@@ -114,7 +113,7 @@ test = do
             ValQuoted $ ExprSymList NullSpan [ExprValue (ValNumber 2), ExprValue (ValNumber 4), ExprValue (ValNumber 6)]
           ]
 
-  describe "core > null?" $ do
+  describe "#null?" $ do
     context "when list is empty" $ do
       it "returns true" $ do
         evalExpr [i| (null? '()) |] `shouldReturn` Right [ValBool True]
@@ -124,7 +123,7 @@ test = do
       it "returns true" $ do
         evalExpr [i| (null? '(1)) |] `shouldReturn` Right [ValBool False]
 
-  describe "core > list" $ do
+  describe "#list" $ do
     it "constructs a list" $ do
       evalExpr
         [i|
@@ -146,7 +145,7 @@ test = do
             ValQuoted $ ExprSymList NullSpan []
           ]
 
-  describe "core > concat" $ do
+  describe "#concat" $ do
     it "concatenates 2 lists" $ do
       evalExpr
         [i|
@@ -181,7 +180,7 @@ test = do
                 ]
           ]
 
-  describe "core > let" $ do
+  describe "#let" $ do
     it "creates a binding within the given scope" $ do
       evalExpr
         [i|
@@ -193,7 +192,7 @@ test = do
         |]
         `shouldReturn` Right [ValNumber 14]
 
-  describe "core > cond" $ do
+  describe "#cond" $ do
     it "allows building up conditionals" $ do
       evalExpr
         [i|
@@ -207,7 +206,7 @@ test = do
         |]
         `shouldReturn` Right [ValNil, ValString "adult"]
 
-  describe "core > length" $ do
+  describe "#length" $ do
     it "returns length of list" $ do
       evalExpr
         [i|
@@ -225,7 +224,7 @@ test = do
           |]
           `shouldReturn` Right [ValNumber 0, ValNumber 0, ValNumber 0]
 
-  describe "core > apply" $ do
+  describe "#apply" $ do
     it "applies args to a function" $ do
       evalExpr
         [i|
@@ -235,15 +234,15 @@ test = do
         |]
         `shouldReturn` Right [ValNil, ValNil, ValNumber 7]
 
-  describe "core > id" $ do
+  describe "#id" $ do
     it "returns given value" $ do
       evalExpr [i| (id 5) |] `shouldReturn` Right [ValNumber 5]
 
-  describe "core > const" $ do
+  describe "#const" $ do
     it "returns first arg" $ do
       evalExpr [i| ((const 20) 99) |] `shouldReturn` Right [ValNumber 20]
 
-  describe "core > infix" $ do
+  describe "#infix" $ do
     it "allows using infix notation evaluated left to right" $ do
       evalExpr
         [i|
@@ -252,7 +251,7 @@ test = do
         |]
         `shouldReturn` Right [ValNumber 14, ValNumber 12]
 
-  describe "core > range" $ do
+  describe "#range" $ do
     it "generates a range of numbers" $ do
       evalExpr
         [i|
@@ -291,7 +290,7 @@ test = do
           |]
           `shouldReturn` Right [ValNil, ValNil]
 
-  describe "core > record" $ do
+  describe "#record" $ do
     it "creates constructor and property getters for given record" $ do
       evalExpr
         [i|
@@ -315,7 +314,7 @@ test = do
             ValNumber 25
           ]
 
-  describe "core > elem-at" $ do
+  describe "#elem-at" $ do
     it "returns element at index in a list" $ do
       evalExpr
         [i|
@@ -338,7 +337,7 @@ test = do
             |]
           `shouldReturn` Right [ValNil, ValNil]
 
-  describe "core > zip-with" $ do
+  describe "#zip-with" $ do
     it "returns a lists zipped with given function" $ do
       evalExpr
         [i|
@@ -379,7 +378,7 @@ test = do
                   ]
             ]
 
-  describe "core > index-of" $ do
+  describe "#index-of" $ do
     it "returns the index of given item" $ do
       evalExpr
         [i|
@@ -396,7 +395,7 @@ test = do
           [i| (index-of 182 (list 1 1 2 3 5 8 13 21)) |]
           `shouldReturn` Right [ValNil]
 
-  describe "core > contains?" $ do
+  describe "#contains?" $ do
     it "returns the index of given item" $ do
       evalExpr
         [i|
@@ -407,7 +406,7 @@ test = do
         |]
         `shouldReturn` Right [ValNil, ValBool True, ValBool True, ValBool False]
 
-  describe "core > |>" $ do
+  describe "#|>" $ do
     it "pipes a value through a list of functions" $ do
       evalExpr
         [i|
@@ -419,7 +418,7 @@ test = do
         |]
         `shouldReturn` Right [ValNumber 41, ValNumber 41]
 
-  describe "core > Error/Result" $ do
+  describe "#Error/Result" $ do
     context "when try returns an error result" $ do
       it "allow accessing error with getters" $ do
         evalExpr
@@ -461,7 +460,7 @@ test = do
               ValNil
             ]
 
-  describe "core > expand" $ do
+  describe "#expand" $ do
     it "expands/destructures the values into symbols" $ do
       evalExpr
         [i|

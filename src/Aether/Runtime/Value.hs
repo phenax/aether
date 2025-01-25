@@ -68,6 +68,10 @@ evalErrorToValue (ArgumentLengthError strict expected got name) =
     expectedStr = (if strict then "" else "at least ") ++ show expected
 evalErrorToValue e = ValQuoted $ ExprSymList NullSpan [ExprValue $ ValString "error", ExprValue $ ValString $ show e]
 
+toCommand :: EvalValue -> Maybe (String, [String])
+toCommand (ValQuoted (ExprSymList _ (cmd : args))) = Just (showExprAsString cmd, map showExprAsString args)
+toCommand _ = Nothing
+
 showEvalValue :: EvalValue -> String
 showEvalValue ValNil = "#nil"
 showEvalValue (ValBool bool) = if bool then "#T" else "#F"

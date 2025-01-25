@@ -19,8 +19,10 @@
   - [x] Fix updating symbols `set`/`define`
   - [x] Use Seq for stack
   - [x] Exec commands
-  - [ ] Load/import file
-  - [ ] Import caching
+  - [x] Load/import file
+  - [ ] Import relative instead of from cwd
+  - [ ] Parser: allow empty files
+  - [ ] Read/Write files
   - [ ] Spawning processes + pipes
   - [ ] Operations on string
   - [ ] Operations on symbols (from/to symbol)
@@ -31,8 +33,8 @@
   - [ ] Shortcircuiting for &&, ||
   - [ ] Cleanup your shitty spec
   - [ ] Optimize list stdlib
-  - [ ] Parser: allow empty files
-  - [ ] CLI arguments (passed to `aether run`)
+  - [ ] Get CLI arguments (passed to `aether run`)
+  - [ ] Import caching
 
 #+begin_src scheme
 ; Future plans:
@@ -67,7 +69,6 @@
   - [ ] Socket server mode + socket for commands
   - [ ] Parser: Allow string escaping \"
   - [ ] IO interface: read from stdin
-  - [ ] Read/Write files
   - [ ] To js?
   - [ ] UI for sending commands (dmenu-like)
   - [ ] UI repl completion

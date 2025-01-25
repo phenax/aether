@@ -5,7 +5,6 @@ import Aether.Types
 import Control.Monad.Error.Class (MonadError)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.RWS (MonadState, MonadTrans (lift))
-import Data.Either (fromLeft)
 import Data.Text.IO (hGetContents, readFile)
 import System.Process (CreateProcess (..), StdStream (..))
 import qualified System.Process as Proc
@@ -24,6 +23,7 @@ instance MonadTrans LangIOT where
 
 instance (MonadIO m) => MonadLangIO (LangIOT m) where
   putStringToScreen = lift . liftIO . putStr
+
   execCommand cmd args = lift . liftIO $ do
     let command =
           (Proc.proc cmd args)

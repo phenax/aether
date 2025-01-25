@@ -90,3 +90,6 @@ argsToScope labels args = do
   case zipArgs labels args 0 of
     (_, Just zargs) -> mkScope $ Map.fromList zargs
     (argCount, Nothing) -> throwError $ ArgumentLengthError False argCount (length args) "<todo: name of fn>"
+
+defineScriptMainPath :: FilePath -> Evaluator m ()
+defineScriptMainPath path = modify' $ defineInCurrentScope "*mainfile*" $ ValString path

@@ -1,6 +1,6 @@
 module Specs.ScopeSpec where
 
-import Aether.Runtime.Interpreter (runExprEvaluatorWithCallStack)
+import Aether.Runtime.Interpreter (runEvaluator)
 import Aether.Runtime.Scope (closure, defineInCurrentScope, updateSymbolValue)
 import Aether.Types
 import Control.Monad.RWS (gets, modify')
@@ -12,7 +12,7 @@ import Test.Hspec
 test :: SpecWith ()
 test = do
   let toStackList = stack . envCallStack
-  let eval env f = second toStackList <$> runExprEvaluatorWithCallStack f env
+  let eval env f = second toStackList <$> runEvaluator f env
   let addValueToScope n v s@(Scope {scopeTable}) = s {scopeTable = Map.insert n v scopeTable}
 
   describe "#updateSymbolValue" $ do

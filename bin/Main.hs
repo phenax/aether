@@ -1,10 +1,9 @@
-module Main where
+module Main (main) where
 
 import qualified Aether.Runtime as Runtime
 import Aether.Runtime.Value (evalErrorToValue, showEvalValue)
 import qualified Aether.Syntax.Parser as Parser
 import Aether.Types
-import Control.Monad.IO.Class (MonadIO)
 import Data.Default (Default (def))
 import Data.Text (Text)
 import qualified Data.Text as Text
@@ -32,8 +31,7 @@ main = do
   case parseArgs args def of
     Configuration {configHelp = True} -> putStrLn "Help"
     Configuration {configAction = Just (RunScript scriptFile)} -> do
-      code <- TextIO.readFile scriptFile
-      evalExpr code >>= throwIfError
+      Runtime.evaluateFile scriptFile >>= throwIfError
     Configuration {configAction = Just Repl} -> do
       env <- Runtime.envWithStdLib
       runRepl env
@@ -43,6 +41,7 @@ main = do
     throwIfError (Right _val) = pure ()
     throwIfError (Left e) = error $ showEvalValue $ evalErrorToValue e
 
+-- TODO: Make into evaluator?
 runRepl :: EvalEnvironment -> IO ()
 runRepl env = do
   putStr "λ " >> hFlush stdout
@@ -60,7 +59,7 @@ runRepl env = do
       let parsedResult = Parser.parseAll "input" code
       case parsedResult of
         Right exprs -> do
-          (result, nextEnv) <- Runtime.evaluator env exprs
+          (result, nextEnv) <- Runtime.runEvaluator (Runtime.interpret exprs) env
           printResult result
           pure nextEnv
         Left e -> env <$ putStrLn (errorBundlePretty e)
@@ -68,13 +67,6 @@ runRepl env = do
     printResult :: Either EvalError [EvalValue] -> IO ()
     printResult (Right val) = putStr . unlines $ fmap showEvalValue val
     printResult (Left e) = putStrLn . showEvalValue $ evalErrorToValue e
-
-evalExpr :: (MonadIO m) => Text -> m (Either EvalError [EvalValue])
-evalExpr code = do
-  let results = Parser.parseAll "input" code
-  case results of
-    Right exprs -> Runtime.runInterpreter exprs
-    Left e -> error $ errorBundlePretty e
 
 parseArgs :: [String] -> Configuration -> Configuration
 parseArgs ("repl" : _) config = config {configAction = Just Repl}

@@ -1,21 +1,21 @@
 
+(import 'examples/imported-factorial.scm)
+
 (define (factorial num)
   (if (<= num 1) 1
     (* num (factorial (- num 1)))))
 
 (displayNl (factorial 7))
 
-(set results '[])
-(for (range 10 20) { -> [n]
-  (let [ (result (factorial n)) ]
-    (set results (concat results result))
-    (displayNl n "! is " result))
-})
+(define results (run-factorials-for (range 10 20) factorial))
 
 (displayNl results)
 
-(display (! ls -la))
 
+; Run a command
+;; (display (! ls -la))
+
+; Fibo
 ;; (define (fibo n)
 ;;   (if (<= n 1) 1
 ;;     (+ (fibo (- n 1)) (fibo (- n 2)))))

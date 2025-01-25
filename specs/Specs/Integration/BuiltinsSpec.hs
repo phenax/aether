@@ -20,8 +20,8 @@ evalExpr code = do
     Left e -> error $ errorBundlePretty e
 
 test :: SpecWith ()
-test = do
-  describe "builtin > type" $ do
+test = describe "builtin" $ do
+  describe "#type" $ do
     it "returns correct types for given values" $ do
       let code =
             [i|
@@ -54,7 +54,7 @@ test = do
             ValQuoted (ExprSymbol NullSpan "macro")
           ]
 
-  describe "builtin > error!/try" $ do
+  describe "#error!/try" $ do
     context "when expression raises an error" $ do
       it "returns result with error" $ do
         let code =
@@ -118,7 +118,7 @@ test = do
               mkResultVal ValNil $ ValBool False
             ]
 
-  describe "builtins > progn" $ do
+  describe "#progn" $ do
     context "evaluates expression sequentially in current scope" $ do
       it "defines value in current scope" $ do
         let code =
@@ -136,7 +136,7 @@ test = do
           `shouldBe` Right
             [ValNil, ValNumber 10, ValNumber 15, ValNumber 15]
 
-  describe "builtins > define" $ do
+  describe "#define" $ do
     context "when defining value" $ do
       it "defines value in current scope" $ do
         let code =
@@ -208,7 +208,7 @@ test = do
                   ]
             ]
 
-  describe "builtins > set" $ do
+  describe "#set" $ do
     context "when setting a new value" $ do
       it "defines value in current scope" $ do
         let code =
@@ -264,7 +264,7 @@ test = do
               ValString "inside lambda"
             ]
 
-  describe "builtin > displayNl" $ do
+  describe "#displayNl" $ do
     it "prints given arguments to screen" $ do
       let code = [i| (displayNl 42 5.2 "--" '(1 2)) |]
       result <- runWithMocks $ do
@@ -276,7 +276,7 @@ test = do
         evalExpr code
       result `shouldBe` Right [ValNil]
 
-  describe "builtin > !: exec commands" $ do
+  describe "#!: exec commands" $ do
     it "runs given command" $ do
       let code =
             [i|
@@ -302,7 +302,7 @@ test = do
               ValNil
           ]
 
-  describe "builtin > import" $ do
+  describe "#import" $ do
     let mkTestScript s = [ExprSymList NullSpan [ExprSymbol NullSpan "displayNl", ExprLiteral NullSpan $ LitString s]]
 
     it "imports script files sequentially" $ do

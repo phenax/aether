@@ -6,10 +6,9 @@ import Aether.Runtime.Value
 import Aether.Types
 import Control.Monad (forM_, (>=>))
 import Control.Monad.Except (ExceptT, MonadError (catchError, throwError), runExceptT)
-import Control.Monad.State.Strict (MonadIO, MonadState (get, put), StateT (runStateT), gets, modify')
+import Control.Monad.State.Strict (MonadIO, MonadState, StateT (runStateT), gets, modify')
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as Text
-import qualified Debug.Trace as Debug
 import GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
 
 subtractVal :: (Num a) => [a] -> a
@@ -67,9 +66,17 @@ builtinLoadScript scriptPathsE = do
         throwError $ UserError (ValQuoted $ ExprSymbol NullSpan "import-error") (ValString err)
   pure ValNil
 
-toCommand :: EvalValue -> Maybe (String, [String])
-toCommand (ValQuoted (ExprSymList _ (cmd : args))) = Just (showExprAsString cmd, map showExprAsString args)
-toCommand _ = Nothing
+class Interpretable a b where
+  interpret :: a -> Evaluator m b
+
+instance Interpretable Literal EvalValue where
+  interpret = interpretLiteral
+
+instance Interpretable Expr EvalValue where
+  interpret = interpretExpression
+
+instance Interpretable [Expr] [EvalValue] where
+  interpret = mapM interpret
 
 interpretLiteral :: Literal -> Evaluator m EvalValue
 interpretLiteral = \case
@@ -349,16 +356,9 @@ evaluateCall (ValBool bool) argsE = do
 -- Invald call
 evaluateCall value _args = do throwError $ TypeError $ "Can't call value: " ++ show value -- ++ " with: " ++ show args
 
---
-runExprEvaluatorWithCallStack ::
+runEvaluator ::
   (MonadIO m) =>
   LangIOT (ExceptT EvalError (StateT EvalEnvironment m)) a ->
   EvalEnvironment ->
   m (Either EvalError a, EvalEnvironment)
-runExprEvaluatorWithCallStack m = runStateT (runExceptT $ runLangIOT m)
-
-runExprInterpreterRaw :: (MonadIO m) => EvalEnvironment -> Expr -> m (Either EvalError EvalValue, EvalEnvironment)
-runExprInterpreterRaw env = (`runExprEvaluatorWithCallStack` env) . interpretExpression
-
-runInterpreterRaw :: (MonadIO m) => EvalEnvironment -> [Expr] -> m (Either EvalError [EvalValue], EvalEnvironment)
-runInterpreterRaw env = (`runExprEvaluatorWithCallStack` env) . mapM interpretExpression
+runEvaluator m = runStateT (runExceptT $ runLangIOT m)
