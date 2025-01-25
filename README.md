@@ -19,14 +19,14 @@ There is no help menu. I don't care about you.
 
 
 ## Examples
-Some normal stuff you can do in aether so far. 
-Take a look inside [stdlib](./stdlib/) directory to see what more is available.
+The [examples](./examples/) directory has some examples to look at. For a (sort of) usable CLI example, take a look at [crop-video-cli](./examples/crop-video-cli.scm).
 
+Heres some normal stuff you can do in aether so far. Take a look inside [stdlib](./stdlib/) directory to see what more is available.
 
 ### Functions
 `define` is used to define functions `(define (symbol ... args) ... exprs)`.
 
-It can also be used to define values `(define symbol value)`
+It can also be used to define values `(define symbol value)`.
 
 ```scheme
 (define (factorial num)
@@ -40,10 +40,9 @@ It can also be used to define values `(define symbol value)`
   (let [ (result (factorial n)) ]
     (set results (concat results result))
     (displayNl n "! is " result))
-})
+}) ; `()`, `[]`, `{}` are the same thing
 
 (displayNl results)
-; `()`, `[]`, `{}` are the same thing
 ```
 
 
@@ -56,9 +55,9 @@ It can also be used to define values `(define symbol value)`
     #nil))
 
 (set n 5)
-(when (= n 5)
+(when (>= n 5)
   (set yay "Yay!")
-  (displayNl "N is 5 and everyone you love will die some day! " yay)
+  (displayNl "N is >= 5 and everyone you love will die some day! " yay)
   (displayNl "Good bye"))
 ```
 
