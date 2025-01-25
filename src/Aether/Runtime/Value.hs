@@ -72,7 +72,9 @@ showEvalValue :: EvalValue -> String
 showEvalValue ValNil = "#nil"
 showEvalValue (ValBool bool) = if bool then "#T" else "#F"
 showEvalValue (ValString str) = str
-showEvalValue (ValNumber n) = show n
+showEvalValue (ValNumber n)
+  | n == fromInteger (round n) = show (round n :: Int)
+  | otherwise = show n
 showEvalValue (ValLambda _ _ args body) = "(-> [" ++ unwords args ++ "]" ++ showExpr body ++ ")"
 showEvalValue (ValQuoted expr) = '\'' : showExpr expr
 showEvalValue (ValMacro {}) = "<macro>"
@@ -89,3 +91,8 @@ showExpr (ExprSpliced _ expr) = ",@" ++ showExpr expr
 showExpr (ExprUnquoted _ expr) = ',' : showExpr expr
 showExpr (ExprSymbol _ s) = "<symbol: " ++ s ++ ">"
 showExpr (ExprValue v) = showEvalValue v
+
+showExprAsString :: Expr -> String
+showExprAsString (ExprSymList _ ls) = unwords (map showExpr ls)
+showExprAsString (ExprSymbol _ s) = s
+showExprAsString expr = showExpr expr

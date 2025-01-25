@@ -8,6 +8,9 @@ import Control.Monad ((>=>))
 import Control.Monad.Except (ExceptT, MonadError (catchError, throwError), runExceptT)
 import Control.Monad.State.Strict (MonadIO, MonadState, StateT (runStateT), gets, modify')
 import qualified Data.Map.Strict as Map
+import qualified Data.Text as Text
+import qualified Debug.Trace as Debug
+import GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
 
 subtractVal :: (Num a) => [a] -> a
 subtractVal [] = 0
@@ -48,8 +51,13 @@ builtins =
         ("quote", builtinQuote),
         ("try", builtinTry),
         ("error!", builtinError),
-        ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"]))
+        ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"])),
+        ("!", builtinExecCommand)
       ]
+
+toCommand :: EvalValue -> Maybe (String, [String])
+toCommand (ValQuoted (ExprSymList _ (cmd : args))) = Just (showExprAsString cmd, map showExprAsString args)
+toCommand _ = Nothing
 
 interpretLiteral :: Literal -> Evaluator m EvalValue
 interpretLiteral = \case
@@ -252,6 +260,26 @@ numberBinaryOp fn exp1 exp2 = do
   v1 <- valToNumber <$> interpretExpression exp1
   v2 <- valToNumber <$> interpretExpression exp2
   pure $ fn v1 v2
+
+builtinExecCommand :: [Expr] -> Evaluator m EvalValue
+builtinExecCommand (cmdE : argsE) = do
+  res <- interpretExpression $ ExprQuoted NullSpan $ ExprSymList NullSpan (cmdE : argsE)
+  case toCommand res of
+    Just (cmd, args) -> do
+      (exitCode, stdout, stderr) <- execCommand cmd args
+      case exitCode of
+        ExitFailure n ->
+          throwError $
+            UserError
+              (ValQuoted $ ExprSymbol NullSpan "proc/non-zero-exit-code")
+              (ValString $ "Process exited with status code " ++ show n ++ "\n" ++ Text.unpack stderr)
+        ExitSuccess -> do
+          pure
+            . ValQuoted
+            . ExprSymList NullSpan
+            $ [ExprValue $ ValString $ Text.unpack stdout, ExprValue $ ValString $ Text.unpack stderr]
+    Nothing -> throwError $ UnknownError "Evaluation error: list evaluated to non-list"
+builtinExecCommand [] = throwError $ ArgumentLengthError False 1 0 "!"
 
 operateOnExprs :: ([EvalValue] -> EvalValue) -> [Expr] -> Evaluator m EvalValue
 operateOnExprs fn exprs = fn <$> mapM interpretExpression exprs

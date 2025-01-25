@@ -55,6 +55,29 @@ Take a look inside [stdlib](./stdlib/) directory to see what more is available.
   (displayNl "Good bye"))
 ```
 
+### Process handling
+```scheme
+; Example: Takes a screenshot of the screen of the focussed window and saves it in given directory
+(expand [window-id, _] (! xdotool getwindowfocus)) ; expand macro destructures list into symbols
+(! import -window ,window-id "/home/user/Pictures")
+
+; !: Waits for process to end, returns '(stdout, stderrr)
+; Throws: on non-zero exit code 'proc/non-zero-exit-code "... <stderr>"
+
+; WIP: Process handling + pipes
+```
+
+
+### Run commands
+```scheme
+; Waits for process to end, prints to stdout and returns '(stdout-contents, stderrr-contents)
+; Throws: on non-zero exit code 'proc/exec-error "<stderr>"
+(! ls -la /home/user)
+
+; WIP: Process handling + pipes
+```
+
+
 ### Error handling
 ```scheme
 (define (divide! a b)

@@ -6,6 +6,7 @@ import Aether.Syntax.Parser
 import Aether.Types
 import Data.String.Interpolate.IsString
 import Data.Text (Text)
+import System.Exit (ExitCode (ExitFailure, ExitSuccess))
 import Test.HMock (ExpectContext (expect), (|->))
 import Test.Hspec
 import TestUtils
@@ -265,14 +266,38 @@ test = do
 
   describe "builtin > displayNl" $ do
     it "prints given arguments to screen" $ do
-      let code =
-            [i|
-        (displayNl 42 "--" '(1 2))
-         |]
+      let code = [i| (displayNl 42 5.2 "--" '(1 2)) |]
       result <- runWithMocks $ do
-        expect $ PutStringToScreen "42.0" |-> ()
+        expect $ PutStringToScreen "42" |-> ()
+        expect $ PutStringToScreen "5.2" |-> ()
         expect $ PutStringToScreen "--" |-> ()
-        expect $ PutStringToScreen "'(1.0 2.0)" |-> ()
+        expect $ PutStringToScreen "'(1 2)" |-> ()
         expect $ PutStringToScreen "\n" |-> ()
         evalExpr code
       result `shouldBe` Right [ValNil]
+
+  describe "builtin > shell" $ do
+    it "runs given command" $ do
+      let code =
+            [i|
+              (! ls -la /home/user ,(+ 5 2))
+              (set cmd "hello")
+              (set arg "my arg")
+              (try (! ,cmd --flag something ,arg (1 2)))
+            |]
+      result <- runWithMocks $ do
+        expect $ ExecCommand "ls" ["-la", "/home/user", "7"] |-> (ExitSuccess, "", "")
+        expect $ ExecCommand "hello" ["--flag", "something", "my arg", "1 2"] |-> (ExitFailure 2, "", "Contents of stderror")
+        evalExpr code
+      result
+        `shouldBe` Right
+          [ ValQuoted (ExprSymList NullSpan [ExprValue (ValString ""), ExprValue (ValString "")]),
+            ValNil,
+            ValNil,
+            mkResultVal
+              ( mkErrorVal
+                  (ValQuoted (ExprSymbol NullSpan "proc/non-zero-exit-code"))
+                  (ValString "Process exited with status code 2\nContents of stderror")
+              )
+              ValNil
+          ]

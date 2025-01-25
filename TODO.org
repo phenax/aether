@@ -17,9 +17,10 @@
   - [x] Error handling (pcall style)
   - [x] De-structuring macro, `(expand (a b c) (list 1 2 3))`
   - [x] Fix updating symbols `set`/`define`
-  - [x] Optimize closure evaluation
+  - [x] Use Seq for stack
+  - [x] Exec commands
   - [ ] Load/import file
-  - [ ] Shell commands
+  - [ ] Spawning processes + pipes
   - [ ] Operations on string
   - [ ] Operations on symbols (from/to symbol)
   - [ ] BUG: Fix issue with macro return value
@@ -31,6 +32,25 @@
   - [ ] Optimize list stdlib
   - [ ] Parser: allow empty files
   - [ ] CLI arguments (passed to `aether run`)
+
+#+begin_src scheme
+; Future plans:
+; Asynchronous
+; Returns: ProcessID --mapped-to--> stdout/stderr/stdin/processhandle
+(proc/spawn '(ls -la /home/user))
+
+; Synchronous
+; Calls spawn on each. Pipes sequentially
+; Returns: stdout from last pipe (proc/stdout streams it to stdout)
+; Throws: if any fail
+(proc/pipe
+  '(ls -la /path/to/file)
+  '(grep "file.*")
+  (proc/by-lines (-> [line] (string "hello " line)))
+  (proc/tap-lines (-> [line] (displayNl "Line: " line)))
+  proc/stdout)
+; Transform streams: proc/map-lines, proc/map-char, proc/map-all (same with proc/tap-)
+#+end_src
 
 * Later
   - [ ] Repl

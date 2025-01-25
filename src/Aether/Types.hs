@@ -7,7 +7,10 @@ import Control.Monad.RWS.Strict (MonadState)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
+import qualified Data.Text as Text
 import Language.Haskell.TH.Lift (deriveLiftMany)
+import System.Exit (ExitCode)
+import qualified System.Process as Proc
 import Text.Megaparsec (Pos, SourcePos)
 
 type Name = String
@@ -80,8 +83,10 @@ instance Eq Stack where
 newtype ScopeId = ScopeId Int
   deriving (Show, Eq)
 
-data EvalEnvironment = EvalEnvironment {envCallStack :: !Stack, envScopeId :: !Int}
-  deriving (Show)
+data EvalEnvironment = EvalEnvironment
+  { envCallStack :: !Stack,
+    envScopeId :: !Int
+  }
 
 instance Semigroup EvalEnvironment where
   (<>) _ _ = undefined -- TODO: Think. Maybe merging of stacks?
@@ -98,6 +103,7 @@ instance Monoid EvalEnvironment where
 
 class (Monad m) => MonadLangIO m where
   putStringToScreen :: String -> m ()
+  execCommand :: String -> [String] -> m (ExitCode, Text.Text, Text.Text)
 
 type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m a
 
