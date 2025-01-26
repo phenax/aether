@@ -1,348 +1,88 @@
 module Aether.Runtime.Interpreter where
 
+import Aether.Runtime.Builtins (builtins)
 import Aether.Runtime.LangIO (LangIOT (runLangIOT))
-import Aether.Runtime.Scope (argsToScope, closure, defineInCurrentScope, lookupSymbol, mkScope, updateSymbolValue)
-import Aether.Runtime.Value
+import Aether.Runtime.Scope (argsToScope, closure, lookupSymbol)
+import Aether.Runtime.Value (LangShow (showCode))
 import Aether.Types
-import Control.Monad (forM_, (>=>))
-import Control.Monad.Except (ExceptT, MonadError (catchError, throwError), runExceptT)
-import Control.Monad.State.Strict (MonadIO, MonadState, StateT (runStateT), gets, modify')
-import Data.Foldable (Foldable (foldl'))
+import Control.Monad.Except (ExceptT, MonadError (throwError), runExceptT)
+import Control.Monad.State.Strict (MonadIO, StateT (runStateT), gets)
 import qualified Data.Map.Strict as Map
-import qualified Data.Text as Text
-import GHC.IO.Exception (ExitCode (ExitFailure, ExitSuccess))
-
-subtractVal :: (Num a) => [a] -> a
-subtractVal [] = 0
-subtractVal [x] = -x
-subtractVal (x : xs) = x - sum xs
-
-divideVal :: (Fractional a) => [a] -> a
-divideVal [] = 1
-divideVal (x : xs) = x / product xs
-
-builtins :: (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m (Map.Map Name ([Expr] -> m EvalValue))
-builtins =
-  pure $
-    Map.fromList
-      [ ("set", builtinSetE),
-        ("->", builtinLambdaE),
-        ("define", builtinDefineE),
-        ("defmacro", builtinDefmacroE),
-        ("do", builtinDoE),
-        ("progn", builtinPrognE),
-        ("eval", builtinEvalE),
-        ("car", builtinCarE),
-        ("cdr", builtinCdrE),
-        ("cons", builtinConsE),
-        ("+", operateOnExprs (ValNumber . sum . fmap valToNumber)),
-        ("*", operateOnExprs (ValNumber . product . fmap valToNumber)),
-        ("-", operateOnExprs (ValNumber . subtractVal . fmap valToNumber)),
-        ("/", operateOnExprs (ValNumber . divideVal . fmap valToNumber)),
-        ("lt?", builtinLessThan),
-        ("gt?", builtinGreaterThan),
-        ("lte?", builtinLessThanOrEqualTo),
-        ("gte?", builtinGreaterThanOrEqualTo),
-        ("eq?", operateOnExprs (ValBool . checkIfAllEqual)),
-        ("&&", operateOnExprs (ValBool . all valToBool)),
-        ("||", operateOnExprs (ValBool . any valToBool)),
-        ("type", builtinTypeOf),
-        ("display", builtinDisplay),
-        ("quote", builtinQuote),
-        ("try", builtinTry),
-        ("error!", builtinError),
-        ("displayNl", builtinDisplay . (++ [ExprLiteral NullSpan $ LitString "\n"])),
-        ("!", builtinExecCommand),
-        ("import", builtinLoadScript),
-        ("string", builtinString),
-        ("make-symbol", builtinMakeSymbol),
-        ("get-args", builtinGetArgs)
-      ]
-
-builtinGetArgs :: [Expr] -> Evaluator m EvalValue
-builtinGetArgs _ =
-  ValQuoted . ExprSymList NullSpan . fmap (ExprValue . ValString) <$> getArgs
-
-builtinString :: [Expr] -> Evaluator m EvalValue
-builtinString exprs = do
-  values :: [EvalValue] <- interpret exprs
-  pure $ ValString $ concatMap showEvalValueAsString values
-
-builtinMakeSymbol :: [Expr] -> Evaluator m EvalValue
-builtinMakeSymbol [expr] = do
-  value <- interpret expr
-  pure . ValQuoted . ExprSymbol NullSpan $ showEvalValueAsString value
-builtinMakeSymbol args = throwError $ ArgumentLengthError True 1 (length args) "make-symbol"
-
-builtinLoadScript :: [Expr] -> Evaluator m EvalValue
-builtinLoadScript scriptPathsE = do
-  forM_ scriptPathsE $ \scriptPathE -> do
-    scriptPath <- showEvalValueAsString <$> interpretExpression scriptPathE
-    exprs <- loadScriptToAST scriptPath
-    case exprs of
-      Right ast -> mapM interpretExpression ast
-      Left err ->
-        throwError $ UserError (ValQuoted $ ExprSymbol NullSpan "import-error") (ValString err)
-  pure ValNil
 
 class Interpretable a b where
   interpret :: a -> Evaluator m b
 
-instance Interpretable Literal EvalValue where
-  interpret = interpretLiteral
-
-instance Interpretable Expr EvalValue where
-  interpret = interpretExpression
-
-instance Interpretable [Expr] [EvalValue] where
+instance (Interpretable a b) => Interpretable [a] [b] where
   interpret = mapM interpret
 
-interpretLiteral :: Literal -> Evaluator m EvalValue
-interpretLiteral = \case
-  LitString str -> pure $ ValString str
-  LitBool bool -> pure $ ValBool bool
-  LitNumber num -> pure $ ValNumber num
-  LitNil -> pure ValNil
+instance Interpretable Literal EvalValue where
+  interpret = \case
+    LitString str -> pure $ ValString str
+    LitBool bool -> pure $ ValBool bool
+    LitNumber num -> pure $ ValNumber num
+    LitNil -> pure ValNil
+
+instance Interpretable Expr EvalValue where
+  interpret = \case
+    ExprLiteral _ lit -> interpret lit
+    ExprSymbol _ sym -> do
+      isBuiltin <- Map.member sym <$> builtins interpret
+      let fallback
+            | isBuiltin = pure $ ValBuiltin sym
+            | otherwise = throwError $ NameNotFound sym
+      gets (lookupSymbol sym) >>= maybe fallback pure
+    ExprSymList _ [] -> pure ValNil
+    ExprSymList _ (fnE : argsE) -> interpret fnE >>= (`evaluateCall` argsE)
+    ExprUnquoted _ _expr -> undefined -- TODO: either throw error or `interpret expr`
+    ExprSpliced _ _expr -> undefined -- same interpret expr
+    -- ExprValue (ValQuoted expr) -> interpret expr
+    ExprValue value -> pure value
+    ExprQuoted _ (ExprSymList _ []) -> pure ValNil
+    ExprQuoted _ quote -> ValQuoted <$> evalUnquotes quote
+      where
+        evalUnquotes :: Expr -> Evaluator m Expr
+        evalUnquotes (ExprUnquoted _ expr) = ExprValue <$> interpret expr
+        evalUnquotes (ExprSymList _ exprs) = ExprSymList NullSpan <$> (mapM evalUnquotes exprs >>= evalSplices)
+        evalUnquotes expr = pure expr
+
+        evalSplices :: [Expr] -> Evaluator m [Expr]
+        evalSplices [] = pure []
+        evalSplices (ExprSpliced _ expr : exprs) = do
+          val <- interpret expr
+          spliced <- evalSplices exprs
+          (++ spliced) <$> expandSymList val
+        evalSplices (expr : exprs) = (expr :) <$> evalSplices exprs
+
+        expandSymList :: EvalValue -> Evaluator m [Expr]
+        expandSymList (ValQuoted (ExprSymList _ exprs)) = pure exprs
+        expandSymList (ValQuoted (ExprQuoted _ (ExprSymList _ exprs))) = pure exprs
+        expandSymList (ValQuoted sym@(ExprSymbol _ _)) = interpret sym >>= expandSymList
+        expandSymList ValNil = pure []
+        expandSymList e = pure [ExprValue e]
 
 interpretExpression :: Expr -> Evaluator m EvalValue
-interpretExpression = \case
-  ExprLiteral _ lit -> interpretLiteral lit
-  ExprSymbol _ sym -> do
-    isBuiltin <- Map.member sym <$> builtins
-    let fallback
-          | isBuiltin = pure $ ValBuiltin sym
-          | otherwise = throwError $ NameNotFound sym
-    gets (lookupSymbol sym) >>= maybe fallback pure
-  ExprSymList _ [] -> pure ValNil
-  ExprSymList _ (fnE : argsE) -> interpretExpression fnE >>= (`evaluateCall` argsE)
-  ExprUnquoted _ _expr -> undefined -- TODO: either throw error or `interpretExpression expr`
-  ExprSpliced _ _expr -> undefined -- same interpretExpression expr
-  -- ExprValue (ValQuoted expr) -> interpretExpression expr
-  ExprValue value -> pure value
-  ExprQuoted _ (ExprSymList _ []) -> pure ValNil
-  ExprQuoted _ quote -> ValQuoted <$> evalUnquotes quote
-    where
-      evalUnquotes :: Expr -> Evaluator m Expr
-      evalUnquotes (ExprUnquoted _ expr) = ExprValue <$> interpretExpression expr
-      evalUnquotes (ExprSymList _ exprs) = ExprSymList NullSpan <$> (mapM evalUnquotes exprs >>= evalSplices)
-      evalUnquotes expr = pure expr
-
-      evalSplices :: [Expr] -> Evaluator m [Expr]
-      evalSplices [] = pure []
-      evalSplices (ExprSpliced _ expr : exprs) = do
-        val <- interpretExpression expr
-        spliced <- evalSplices exprs
-        (++ spliced) <$> expandSymList val
-      evalSplices (expr : exprs) = (expr :) <$> evalSplices exprs
-
-      expandSymList :: EvalValue -> Evaluator m [Expr]
-      expandSymList (ValQuoted (ExprSymList _ exprs)) = pure exprs
-      expandSymList (ValQuoted (ExprQuoted _ (ExprSymList _ exprs))) = pure exprs
-      expandSymList (ValQuoted sym@(ExprSymbol _ _)) = interpretExpression sym >>= expandSymList
-      expandSymList ValNil = pure []
-      expandSymList e = pure [ExprValue e]
-
-builtinQuote :: [Expr] -> Evaluator m EvalValue
-builtinQuote [expr] = pure $ ValQuoted expr
-builtinQuote args = throwError $ ArgumentLengthError True 1 (length args) "quote"
-
-builtinDisplay :: [Expr] -> Evaluator m EvalValue
-builtinDisplay exprs = do
-  let displayVal = putStringToScreen . showEvalValue
-  mapM_ (interpretExpression >=> displayVal) exprs
-  pure ValNil
-
-builtinSetE :: [Expr] -> Evaluator m EvalValue
-builtinSetE [ExprSymbol _ name, valueE] = do
-  !value <- interpretExpression valueE
-  modify' $ updateSymbolValue name value
-  pure ValNil
-builtinSetE (ExprSymbol _ _ : args) =
-  do throwError $ ArgumentLengthError True 2 (length args) "set"
-builtinSetE args =
-  do throwError $ TypeError $ "Invalid call to set: " ++ show args
-
-builtinDefineE :: [Expr] -> Evaluator m EvalValue
-builtinDefineE (ExprSymList sourceSpan (ExprSymbol _ name : argsE) : bodyE) = do
-  lambda <- mkLambda sourceSpan argsE bodyE
-  modify' $ defineInCurrentScope name lambda
-  pure ValNil
-builtinDefineE [ExprSymbol _ name, valueE] = do
-  value <- interpretExpression valueE
-  modify' $ defineInCurrentScope name value
-  pure ValNil
-builtinDefineE (ExprSymbol _ _ : args) =
-  do throwError $ ArgumentLengthError True 2 (length args) "define"
-builtinDefineE _ =
-  do throwError $ TypeError "Invalid call to define"
-
-builtinLambdaE :: [Expr] -> Evaluator m EvalValue
-builtinLambdaE (ExprSymList sourceSpan argsE : bodyE) =
-  mkLambda sourceSpan argsE bodyE
-builtinLambdaE _ =
-  do throwError $ TypeError "Invalid call to ->"
-
-mkLambda :: SourceSpan -> [Expr] -> [Expr] -> Evaluator m EvalValue
-mkLambda sourceSpan argsE bodyE = do
-  stack <- gets envCallStack
-  pure $ ValLambda stack sourceSpan argLabels body
-  where
-    argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList NullSpan (ExprSymbol NullSpan "progn" : bodyE)
-
-builtinDefmacroE :: [Expr] -> Evaluator m EvalValue
-builtinDefmacroE (ExprSymList sourceSpan (ExprSymbol _ name : argsE) : bodyE) = do
-  stack <- gets envCallStack
-  modify' (defineInCurrentScope name $ ValMacro stack sourceSpan argLabels body)
-  pure ValNil
-  where
-    argLabels = argToLabel <$> argsE
-    body = if length bodyE == 1 then head bodyE else ExprSymList NullSpan (ExprSymbol NullSpan "progn" : bodyE)
-builtinDefmacroE _ = do throwError $ TypeError "Invalid call to defmacro"
-
-builtinDoE :: [Expr] -> Evaluator m EvalValue
-builtinDoE body = do
-  stack <- gets envCallStack
-  !scope <- mkScope Map.empty
-  !results <- closure scope stack $ do
-    mapM interpretExpression body
-  pure $ case results of
-    [] -> ValNil
-    _ -> last results
-
-builtinPrognE :: [Expr] -> Evaluator m EvalValue
-builtinPrognE body = do
-  results <- mapM interpretExpression body
-  pure $ case results of
-    [] -> ValNil
-    _ -> last results
-
-builtinEvalE :: [Expr] -> Evaluator m EvalValue
-builtinEvalE [expr] = do
-  res <- interpretExpression expr
-  case res of
-    ValQuoted quote -> interpretExpression quote
-    _ -> pure res
-builtinEvalE exprs = do throwError $ ArgumentLengthError True 1 (length exprs) "eval"
-
-builtinCarE :: [Expr] -> Evaluator m EvalValue
-builtinCarE [expr] = do
-  res <- interpretExpression expr
-  case res of
-    ValQuoted (ExprSymList _ (first : _)) -> interpretExpression first
-    ValQuoted (ExprSymList _ []) -> pure ValNil
-    ValQuoted quote -> interpretExpression quote
-    _ -> pure res
-builtinCarE exprs = do throwError $ ArgumentLengthError True 1 (length exprs) "car"
-
-builtinCdrE :: [Expr] -> Evaluator m EvalValue
-builtinCdrE [expr] = do
-  res <- interpretExpression expr
-  case res of
-    ValQuoted (ExprSymList _ [_]) -> pure ValNil
-    ValQuoted (ExprSymList _ (_ : rest)) ->
-      ValQuoted . ExprSymList NullSpan . fmap ExprValue <$> mapM interpretExpression rest
-    _ -> pure ValNil
-builtinCdrE exprs = do throwError $ ArgumentLengthError True 1 (length exprs) "cdr"
-
-builtinConsE :: [Expr] -> Evaluator m EvalValue
-builtinConsE [itemE, restE] = do
-  item <- interpretExpression itemE
-  rest <- interpretExpression restE
-  case rest of
-    ValQuoted (ExprSymList _ values) -> pure $ ValQuoted (ExprSymList NullSpan (ExprValue item : values))
-    ValNil -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item])
-    ValQuoted (ExprLiteral _ LitNil) -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item])
-    ValQuoted (ExprValue ValNil) -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item])
-    _ -> pure $ ValQuoted (ExprSymList NullSpan [ExprValue item, ExprValue rest])
-builtinConsE exprs = do throwError $ ArgumentLengthError True 2 (length exprs) "cons"
-
-builtinLessThan :: [Expr] -> Evaluator m EvalValue
-builtinLessThan [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a <)) exp1 exp2
-builtinLessThan exprs = throwError $ ArgumentLengthError True 2 (length exprs) "lt?"
-
-builtinGreaterThan :: [Expr] -> Evaluator m EvalValue
-builtinGreaterThan [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a >)) exp1 exp2
-builtinGreaterThan exprs = throwError $ ArgumentLengthError True 2 (length exprs) "gt?"
-
-builtinLessThanOrEqualTo :: [Expr] -> Evaluator m EvalValue
-builtinLessThanOrEqualTo [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a <=)) exp1 exp2
-builtinLessThanOrEqualTo exprs = throwError $ ArgumentLengthError True 2 (length exprs) "lte?"
-
-builtinGreaterThanOrEqualTo :: [Expr] -> Evaluator m EvalValue
-builtinGreaterThanOrEqualTo [exp1, exp2] = numberBinaryOp (\a -> ValBool . (a >=)) exp1 exp2
-builtinGreaterThanOrEqualTo exprs = throwError $ ArgumentLengthError True 2 (length exprs) "gte?"
-
-builtinTypeOf :: [Expr] -> Evaluator m EvalValue
-builtinTypeOf [expr] = ValQuoted . ExprSymbol NullSpan . typeOfValue <$> interpretExpression expr
-builtinTypeOf exprs = throwError $ ArgumentLengthError True 1 (length exprs) "type"
-
-builtinTry :: [Expr] -> Evaluator m EvalValue
-builtinTry exprs = catchError (toRight <$> tryValue) (pure . toLeft . evalErrorToValue)
-  where
-    tryValue = interpretExpression (ExprSymList NullSpan $ ExprSymbol NullSpan "do" : exprs)
-    toRight v = ValQuoted $ ExprSymList NullSpan [ExprValue ValNil, ExprValue v]
-    toLeft e = ValQuoted $ ExprSymList NullSpan [ExprValue e, ExprValue ValNil]
-
-builtinError :: [Expr] -> Evaluator m EvalValue
-builtinError (labelE : messageE : _) = do
-  label <- interpretExpression labelE
-  message <- interpretExpression messageE
-  throwError $ UserError label message
-builtinError [labelE] = do
-  label <- interpretExpression labelE
-  throwError $ UserError label ValNil
-builtinError [] = throwError $ UserError (ValQuoted $ ExprSymbol NullSpan "error") ValNil
-
-numberBinaryOp :: (Double -> Double -> EvalValue) -> Expr -> Expr -> Evaluator m EvalValue
-numberBinaryOp fn exp1 exp2 = do
-  v1 <- valToNumber <$> interpretExpression exp1
-  v2 <- valToNumber <$> interpretExpression exp2
-  pure $ fn v1 v2
-
-builtinExecCommand :: [Expr] -> Evaluator m EvalValue
-builtinExecCommand (cmdE : argsE) = do
-  res <- interpretExpression $ ExprQuoted NullSpan $ ExprSymList NullSpan (cmdE : argsE)
-  case toCommand res of
-    Just (cmd, args) -> do
-      (exitCode, stdout, stderr) <- execCommand cmd args
-      case exitCode of
-        ExitFailure n ->
-          throwError $
-            UserError
-              (ValQuoted $ ExprSymbol NullSpan "proc/non-zero-exit-code")
-              (ValString $ "Process exited with status code " ++ show n ++ "\n" ++ Text.unpack stderr)
-        ExitSuccess -> do
-          pure
-            . ValQuoted
-            . ExprSymList NullSpan
-            $ [ExprValue $ ValString $ Text.unpack stdout, ExprValue $ ValString $ Text.unpack stderr]
-    Nothing -> throwError $ UnknownError "Evaluation error: list evaluated to non-list"
-builtinExecCommand [] = throwError $ ArgumentLengthError False 1 0 "!"
-
-operateOnExprs :: ([EvalValue] -> EvalValue) -> [Expr] -> Evaluator m EvalValue
-operateOnExprs fn exprs = fn <$> mapM interpretExpression exprs
+interpretExpression = interpret
 
 evaluateCall :: EvalValue -> [Expr] -> Evaluator m EvalValue
 -- Lambda
 evaluateCall (ValLambda stack _ labels body) argsE = do
-  args <- mapM interpretExpression argsE
+  args <- interpret argsE
   argsScope <- argsToScope labels args
-  closure argsScope stack $ interpretExpression body
+  closure argsScope stack $ interpret body
 
 -- Macros
--- TODO: Figure out how to lexically scope macros
+-- TODO: Figure out how to scope macros
 evaluateCall (ValMacro (Stack _defnstack) _ labels body) argsE = do
   callerstack <- gets envCallStack
   !args <- mapM interpretMacroArgs argsE
   !argsScope <- argsToScope labels args
-  !result <- closure argsScope callerstack $ interpretExpression body
+  !result <- closure argsScope callerstack $ interpret body
   case result of
-    ValQuoted expr -> interpretExpression $ unwrapQuotes expr
+    ValQuoted expr -> interpret $ unwrapQuotes expr
     _ -> pure result
   where
     interpretMacroArgs :: Expr -> Evaluator m EvalValue
-    interpretMacroArgs (ExprLiteral _ lit) = interpretLiteral lit
+    interpretMacroArgs (ExprLiteral _ lit) = interpret lit
     interpretMacroArgs (ExprValue v) = pure v
     interpretMacroArgs (ExprQuoted _ quote) = pure $ ValQuoted quote
     interpretMacroArgs (ExprSymList _ exprs) = ValQuoted . ExprSymList NullSpan . fmap ExprValue <$> mapM interpretMacroArgs exprs
@@ -356,25 +96,28 @@ evaluateCall (ValMacro (Stack _defnstack) _ labels body) argsE = do
 
 -- Primitive evaluation
 evaluateCall (ValBuiltin name) argsE = do
-  builtin <- Map.lookup name <$> builtins
+  builtin <- Map.lookup name <$> builtins interpret
   case builtin of
     Just eval -> eval argsE
     Nothing -> throwError $ UnknownError "Primtive not defined"
 
 -- Quoted values
 evaluateCall (ValQuoted quote) argsE = do
-  !fn <- interpretExpression quote
+  !fn <- interpret quote
   evaluateCall fn argsE
 
 -- Booleans are callable
 evaluateCall (ValBool bool) argsE = do
   case argsE of
-    (then_ : _) | bool -> interpretExpression then_
-    (_ : else_ : _) | not bool -> interpretExpression else_
+    (then_ : _) | bool -> interpret then_
+    (_ : else_ : _) | not bool -> interpret else_
     _ -> pure ValNil
 
 -- Invald call
-evaluateCall value _args = do throwError $ TypeError $ "Can't call value: " ++ show value -- ++ " with: " ++ show args
+evaluateCall value args = do
+  throwError
+    . TypeError "call"
+    $ "Can't call value: " ++ showCode value ++ " with: " ++ showCode args
 
 runEvaluator ::
   (MonadIO m) =>

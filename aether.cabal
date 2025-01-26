@@ -73,7 +73,9 @@ library lib-aether
   hs-source-dirs: src
   exposed-modules:
     Aether
+    Aether.Repl
     Aether.Runtime
+    Aether.Runtime.Builtins
     Aether.Runtime.Interpreter
     Aether.Runtime.LangIO
     Aether.Runtime.Scope

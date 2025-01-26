@@ -10,9 +10,28 @@ valToNumber (ValQuoted (ExprLiteral _ (LitNumber n))) = n
 valToNumber (ValQuoted (ExprLiteral _ (LitString str))) = read str
 valToNumber _ = 0
 
+valToString :: EvalValue -> String
+valToString (ValString s) = s
+valToString (ValQuoted e) = exprToString e
+valToString v = showCode v
+
 valToBool :: EvalValue -> Bool
 valToBool (ValBool bool) = bool
 valToBool _ = True
+
+exprToString :: Expr -> String
+exprToString (ExprSymList _ ls) = unwords (map showCode ls)
+exprToString (ExprSymbol _ s) = s
+exprToString expr = showCode expr
+
+subtractList :: (Num a) => [a] -> a
+subtractList [] = 0
+subtractList [x] = -x
+subtractList (x : xs) = x - sum xs
+
+divideList :: (Fractional a) => [a] -> a
+divideList [] = 1
+divideList (x : xs) = x / product xs
 
 checkIfAllEqual :: [EvalValue] -> Bool
 checkIfAllEqual [] = False
@@ -66,42 +85,35 @@ evalErrorToValue (ArgumentLengthError strict expected got name) =
   where
     message = "Expected " ++ expectedStr ++ " arguments but got " ++ show got ++ " (" ++ name ++ ")"
     expectedStr = (if strict then "" else "at least ") ++ show expected
+evalErrorToValue (TypeError name message) = mkErrorVal (ValString "type-error") (ValString $ name ++ ": " ++ message)
 evalErrorToValue e = ValQuoted $ ExprSymList NullSpan [ExprValue $ ValString "error", ExprValue $ ValString $ show e]
 
-toCommand :: EvalValue -> Maybe (String, [String])
-toCommand (ValQuoted (ExprSymList _ (cmd : args))) = Just (showExprAsString cmd, map showExprAsString args)
-toCommand _ = Nothing
+class LangShow a where
+  showCode :: a -> String
 
-showEvalValue :: EvalValue -> String
-showEvalValue ValNil = "#nil"
-showEvalValue (ValBool bool) = if bool then "#T" else "#F"
-showEvalValue (ValString str) = str
-showEvalValue (ValNumber n)
-  | n == fromInteger (round n) = show (round n :: Int)
-  | otherwise = show n
-showEvalValue (ValLambda _ _ args body) = "(-> [" ++ unwords args ++ "]" ++ showExpr body ++ ")"
-showEvalValue (ValQuoted expr) = '\'' : showExpr expr
-showEvalValue (ValMacro {}) = "<macro>"
-showEvalValue (ValBuiltin s) = "<builtin: " ++ s ++ ">"
+instance LangShow EvalValue where
+  showCode ValNil = "#nil"
+  showCode (ValBool bool) = if bool then "#T" else "#F"
+  showCode (ValString str) = str
+  showCode (ValNumber n)
+    | n == fromInteger (round n) = show (round n :: Int)
+    | otherwise = show n
+  showCode (ValLambda _ _ args body) = "(-> [" ++ unwords args ++ "]" ++ showCode body ++ ")"
+  showCode (ValQuoted expr) = '\'' : showCode expr
+  showCode (ValMacro {}) = "<macro>"
+  showCode (ValBuiltin s) = "<builtin: " ++ s ++ ">"
 
-showExpr :: Expr -> String
-showExpr (ExprLiteral _ (LitString s)) = s
-showExpr (ExprLiteral _ (LitNumber n)) = showEvalValue $ ValNumber n
-showExpr (ExprLiteral _ (LitBool b)) = showEvalValue $ ValBool b
-showExpr (ExprLiteral _ LitNil) = showEvalValue ValNil
-showExpr (ExprSymList _ ls) = "(" ++ unwords (map showExpr ls) ++ ")"
-showExpr (ExprQuoted _ quote) = '\'' : showExpr quote
-showExpr (ExprSpliced _ expr) = ",@" ++ showExpr expr
-showExpr (ExprUnquoted _ expr) = ',' : showExpr expr
-showExpr (ExprSymbol _ s) = "<symbol: " ++ s ++ ">"
-showExpr (ExprValue v) = showEvalValue v
+instance (LangShow a) => LangShow [a] where
+  showCode = unwords . map showCode
 
-showExprAsString :: Expr -> String
-showExprAsString (ExprSymList _ ls) = unwords (map showExpr ls)
-showExprAsString (ExprSymbol _ s) = s
-showExprAsString expr = showExpr expr
-
-showEvalValueAsString :: EvalValue -> String
-showEvalValueAsString (ValString s) = s
-showEvalValueAsString (ValQuoted e) = showExprAsString e
-showEvalValueAsString v = showEvalValue v
+instance LangShow Expr where
+  showCode (ExprLiteral _ (LitString s)) = s
+  showCode (ExprLiteral _ (LitNumber n)) = showCode $ ValNumber n
+  showCode (ExprLiteral _ (LitBool b)) = showCode $ ValBool b
+  showCode (ExprLiteral _ LitNil) = showCode ValNil
+  showCode (ExprSymList _ ls) = "(" ++ unwords (map showCode ls) ++ ")"
+  showCode (ExprQuoted _ quote) = '\'' : showCode quote
+  showCode (ExprSpliced _ expr) = ",@" ++ showCode expr
+  showCode (ExprUnquoted _ expr) = ',' : showCode expr
+  showCode (ExprSymbol _ s) = "<symbol: " ++ s ++ ">"
+  showCode (ExprValue v) = showCode v
