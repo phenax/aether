@@ -22,7 +22,7 @@
   - [x] Load/import file
   - [x] Operations on symbols (from/to symbol)
   - [x] Repl
-  - [ ] `%`, `even?`, `odd?`
+  - [x] `%`, `even?`, `odd?`
   - [ ] Read/Write files
   - [ ] Import relative instead of from cwd
   - [ ] Parser: allow empty files
@@ -53,6 +53,7 @@
   - [ ] UI for sending commands (dmenu-like)
   - [ ] UI repl completion
   - [ ] UI repl highlighting
+  - [ ] C ffi
 
 * Maybe
   - [ ] JIT

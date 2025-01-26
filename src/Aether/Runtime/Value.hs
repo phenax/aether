@@ -35,6 +35,11 @@ divideList :: (Fractional a) => [a] -> a
 divideList [] = 1
 divideList (x : xs) = x / product xs
 
+remainder2 :: (RealFrac a) => [a] -> Integer
+remainder2 [a] = floor a
+remainder2 (a : b : _) = floor a `mod` floor b
+remainder2 _ = 0
+
 checkIfAllEqual :: [EvalValue] -> Bool
 checkIfAllEqual [] = False
 checkIfAllEqual [_] = True

@@ -23,7 +23,7 @@ main :: IO ()
 main = do
   args <- System.Environment.getArgs
   case parseArgs args def of
-    Config {configHelp = True} -> putStrLn "Help"
+    Config {configHelp = True} -> putStrLn "Help yourself"
     Config {configAction = Just (RunScript scriptFile)} -> Runtime.evaluateFile scriptFile >>= throwIfError
     Config {configAction = Just Repl} -> Runtime.envWithStdLib >>= Repl.runRepl
     _ -> pure ()

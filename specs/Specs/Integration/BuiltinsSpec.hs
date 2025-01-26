@@ -381,3 +381,9 @@ test = describe "builtin" $ do
         expect $ SystemExit 0
         evalExpr code
       result `shouldBe` Right [ValNil, ValNil, ValNil]
+
+  describe "#remainder" $ do
+    it "returns remainder of division" $ do
+      let code = [i| (remainder 13 5) (remainder 2 3) (remainder []) (remainder 5 5) (remainder (- 8) 5) |]
+      result <- runWithMocks $ evalExpr code
+      result `shouldBe` Right [ValNumber 3, ValNumber 2, ValNumber 0, ValNumber 0, ValNumber 2]

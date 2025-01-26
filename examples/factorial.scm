@@ -13,40 +13,30 @@
 
 (displayNl (get-args))
 
-; Run a command
-;; (display (! ls -la))
+(record Person
+  :person/name  ; :person/ is just for namespacing. Can be any symbol
+  :person/age)
 
-; Fibo
-;; (define (fibo n)
-;;   (if (<= n 1) 1
-;;     (+ (fibo (- n 1)) (fibo (- n 2)))))
-;;
-;; (displayNl (fibo 10))
+(define (show-person p)
+  (displayNl (:person/name p) " is " (:person/age p) " years old"))
 
-;; (define (get-spec-property value)
-;;   (-> [... spec]
-;;     (cond
-;;       [(= (quote 'to_equal) (car spec))
-;;         (list (= value (cadr spec)) "equal")
-;;       ]
-;;       [(= (quote 'to_not_equal) (car spec))
-;;         (list (not (= value (cadr spec))) "not equal")
-;;       ]
-;;       [else  (error! "Invalid expect expression")])))
+(set john (Person "John" 8))
+(show-person john)
+
+(set updated-john
+  (|> john
+    (_^ set@:person/name "Johneshwar")
+    (_^ set@:person/age 10)))
+(show-person updated-john)
+
+
+;; (describe "some-function"
+;;   (define-value value '(1 2 3))
 ;;
-;; (define (expect value ... args)
-;;    (define result (apply (curry get-spec-property value) args))
-;;    (displayNl result)
-;;    
-;;    (if (= (car result) #T)
-;;      #nil
-;;      (progn
-;;        (displayNl "Expected " value " to " (cadr result))
-;;        (error! (quote 'assertion-error) "Assertion Error")
-;;        )
-;;      )
+;;   (context "when something is something"
+;;     (it "does something"
+;;       (set result (map (^_ + 1) value))
+;;       (expect result (:to-equal '(2 3 4))))
 ;;   )
-;;
-;; (expect 1 'to_equal 2)
-; (expect 1 'to_equal 2)
+;; )
 

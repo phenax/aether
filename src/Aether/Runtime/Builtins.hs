@@ -14,7 +14,10 @@ type Interpret m = Expr -> Evaluator m EvalValue
 
 type Builtin m = Interpret m -> [Expr] -> Evaluator m EvalValue
 
-builtins :: (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => (Expr -> Evaluator m EvalValue) -> m (Map.Map Name ([Expr] -> m EvalValue))
+builtins ::
+  (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) =>
+  (Expr -> Evaluator m EvalValue) ->
+  m (Map.Map Name ([Expr] -> m EvalValue))
 builtins interpret =
   pure $
     Map.fromList
@@ -32,6 +35,7 @@ builtins interpret =
         ("*", operateOnExprs (ValNumber . product . fmap valToNumber) interpret),
         ("-", operateOnExprs (ValNumber . subtractList . fmap valToNumber) interpret),
         ("/", operateOnExprs (ValNumber . divideList . fmap valToNumber) interpret),
+        ("remainder", operateOnExprs (ValNumber . fromInteger . remainder2 . fmap valToNumber) interpret),
         ("lt?", builtinLessThan interpret),
         ("gt?", builtinGreaterThan interpret),
         ("lte?", builtinLessThanOrEqualTo interpret),

@@ -1,5 +1,5 @@
 # Aether lang
-It's a programming language. It's based on scheme. It's mine. Leave me alone.
+It's an interpreter and a programming language. It's based on scheme. It's mine. Leave me alone.
 
 
 ## Install
@@ -12,7 +12,7 @@ Or just run directly it with nix flakes: `nix run github:phenax/aether -- repl`.
 
 ## Running
 - Run the repl with `aether repl`. Use rlwrap for a better experience (`rlwrap aether repl`)
-- Evaluate a script file with `aether run ./path/to/file.scm`
+- Evaluate a script file with `aether run ./path/to/file.scm -- arg1 arg2`
 
 There is no help menu. I don't care about you.
 
@@ -21,7 +21,7 @@ There is no help menu. I don't care about you.
 ## Examples
 The [examples](./examples/) directory has some examples to look at. For a (sort of) usable CLI example, take a look at [crop-video-cli](./examples/crop-video-cli.scm).
 
-Heres some normal stuff you can do in aether so far. Take a look inside [stdlib](./stdlib/) directory to see what more is available.
+Heres some normal stuff you can do in aether so far.
 
 ### Functions
 `define` is used to define functions `(define (symbol ... args) ... exprs)`.
@@ -40,7 +40,8 @@ It can also be used to define values `(define symbol value)`.
   (let [ (result (factorial n)) ]
     (set results (concat results result))
     (displayNl n "! is " result))
-}) ; `()`, `[]`, `{}` are the same thing
+})
+; `()`, `[]`, `{}` are the same thing
 
 (displayNl results)
 ```
@@ -63,7 +64,7 @@ It can also be used to define values `(define symbol value)`.
 
 
 ### Error handling
-`try` function handles errors in expressions inside it and returns `'(error value)`. `(try (error-prone-code))`
+`try` function handles errors in the expressions inside it and returns `'(error value)`.
 
 `error!` function is used to throw exceptions. `(error! 'error-identifier "Error message")`
 
@@ -147,6 +148,15 @@ Why not?
 
 (displayNl (:person/name john) " is " (:person/age john) " years old")
 
-; WIP: updating record properties has not been implemented yet
+; Create a copy with a property updated
+(set updated-john (set@:person/name "Johnathy McJohnathan" john))
+
+(displayNl (:person/name updated-john) " is " (:person/age updated-john) " years old")
+
+; Compose setters together to update multiple properties
+(set updated-john
+  (|> john
+    (_^ set@:person/name "Johneshwar")
+    (_^ set@:person/age 9)))
 ```
 

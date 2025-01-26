@@ -1,20 +1,17 @@
 ; Primitives
-(define (id x) x)
-(define (const x) (-> [_] x))
 (define (not a) (a #F #T))
-(define (apply fn args) (eval '(,fn ,@args)))
-(define = eq?)
-(define < lt?)
-(define > gt?)
-(define <= lte?)
-(define >= gte?)
+(define else #T)
 
 ; Function
+(define (id x) x)
+(define (const x) (-> [_] x))
 (define (curry fn x) (-> [y] (fn x y)))
 (define _^ curry)
 (define (^_ fn x) (-> [y] (fn y x)))
 (define (flip fn) (-> [x y] (fn y x)))
+(define (apply fn args) (eval '(,fn ,@args)))
 
+;; Pipe function application
 ;; Example:
 ;;   (|> 5 (^_ * 5) (^_ + 2))
 ;;   (|> list
@@ -28,9 +25,17 @@
 (define (|> val ... fns) (fold (-> [v fn] (fn v)) val fns))
 
 ; Numbers
-(define (positive? num) (gt? num 0))
-(define (negative? num) (lt? num 0))
-(define (zero? num) (eq? num 0))
+(define = eq?)
+(define < lt?)
+(define > gt?)
+(define <= lte?)
+(define >= gte?)
+(define (positive? num) (> num 0))
+(define (negative? num) (< num 0))
+(define (zero? num) (= num 0))
+(define (even? n) (= (remainder n 2) 0))
+(define (odd? n) (= (remainder n 2) 1))
+(define (divisible? a b) (= (remainder a b) 0))
 
 ;; If conditionals
 ;; Example:
@@ -65,15 +70,13 @@
     ,@(map (-> [bind] '(define ,@bind)) bindings)
     ,@body))
 
-(define else #T)
-
 ;; Cond conditional
 ;; Example:
 ;;   (cond
-;;     [(lt? age 3)   "baby"]
-;;     [(lt? age 13)  "child"]
-;;     [(lt? age 18)  "adolescent"]
-;;     [(lt? age 60)  "adult"]
+;;     [(<= age 3)   "baby"]
+;;     [(<= age 13)  "child"]
+;;     [(<= age 18)  "adolescent"]
+;;     [(<= age 60)  "adult"]
 ;;     [else          "almost dead"])
 (defmacro (cond ... cases)
   (define (create-case cases)
@@ -125,19 +128,15 @@
 ;; Example:
 ;;   (expand [a b c] (list 5 8 2))
 ;;   (displayNl a ", " b ", " c)
-;; 
+;;
 ;; TODO: Implement ... for rest of the items
 (defmacro (expand symbols values)
-  (concat
-    (list
-      'progn
-      (list define '... values))
+  '(progn
+    (define ...all ,values)
 
-    (zip-with
+    ,@(zip-with
       (-> [sym index]
-        (list define sym
-          '(elem-at ,index ...)))
+        (list 'define sym
+          '(elem-at ,index ...all)))
       symbols
-      (indexes symbols))
-
-    #nil))
+      (indexes symbols))))
