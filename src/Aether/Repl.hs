@@ -22,7 +22,15 @@ runRepl env = do
   where
     evalCommand "q" = exitSuccess
     evalCommand "quit" = exitSuccess
-    evalCommand _ = pure ()
+    evalCommand ('$' : code) = evalCode (Text.pack ("($ " ++ code ++ ")")) >>= runRepl
+    evalCommand c | c `elem` ["help", "h"] = do
+      putStrLn "Any aether expression will be evaluated"
+      putStrLn "Commands:"
+      putStrLn "  \\h             help menu (or \\help)"
+      putStrLn "  \\q             exit repl (or \\quit)"
+      putStrLn "  \\ + 5 2        evaluates (+ 5 2) as aether expression"
+      putStrLn "  \\$ 5 + 2 - 3   evaluates (- (+ 5 2) 3) in infix notation"
+    evalCommand code = evalCode (Text.pack ("(" ++ code ++ ")")) >>= runRepl
 
     evalCode :: Text -> IO EvalEnvironment
     evalCode code = do
