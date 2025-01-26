@@ -49,11 +49,18 @@ builtins interpret =
         ("import", builtinLoadScript interpret),
         ("string", builtinString interpret),
         ("make-symbol", builtinMakeSymbol interpret),
-        ("get-args", builtinGetArgs interpret)
+        ("get-args", builtinGetArgs interpret),
+        ("exit", builtinExit interpret)
       ]
 
 operateOnExprs :: ([EvalValue] -> EvalValue) -> Builtin m
 operateOnExprs fn interpret exprs = fn <$> mapM interpret exprs
+
+builtinExit :: Builtin m
+builtinExit interpret [expr] = do
+  interpret expr >>= systemExit . floor . valToNumber
+  pure ValNil
+builtinExit _ args = throwError $ ArgumentLengthError True 1 (length args) "exit"
 
 builtinQuote :: Builtin m
 builtinQuote _ [expr] = pure $ ValQuoted expr

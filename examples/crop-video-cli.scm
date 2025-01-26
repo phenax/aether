@@ -16,13 +16,12 @@
   .end-time)
 
 (define (crop-video config)
-  (set result (! ffmpeg -y
+  (expand [_stdout stderr] (! ffmpeg -y
      -i ,(.in-file config)
      ,@(get-time-args config)
      -c:v copy
      ,(.out-file config)))
-  
-  (displayNl result))
+  (displayNl stderr))
 
 (define (get-time-args config)
   (define start-time
@@ -48,14 +47,13 @@
     [ (= "-o" (car args))                (parse-args (drop 2 args) (set@.out-file (cadr args) cfg)) ]
     [ else                               (error! (quote 'invalid-arguments) (string "Invalid argument: " (car args))) ]))
 
-(define args (get-args))
-
 (define (main)
-  (define config (parse-args args (Config #nil #nil #nil #nil)))
+  (define config (parse-args (get-args) (Config #nil #nil #nil #nil)))
 
   (unless (nil? config)
     (when (|| (nil? (.in-file config)) (nil? (.out-file config)))
-      (error! (quote 'invalid-arguments) "You need to specify both in/out file paths with -i and -o flags"))
+      (error! (quote 'invalid-arguments)
+              "You need to specify both in/out file paths with -i and -o flags"))
 
     (displayNl "Cropping " (.in-file config) " into " (.out-file config) "...")
     (crop-video config)
@@ -65,5 +63,6 @@
 (unless (nil? error)
   (help)
   (displayNl)
-  (displayNl (:error/message error)))
+  (displayNl (:error/message error))
+  (exit 1))
 

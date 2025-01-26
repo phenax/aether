@@ -8,6 +8,7 @@ import Control.Monad.RWS (MonadState, MonadTrans (lift))
 import Data.List (elemIndex)
 import Data.Text.IO (hGetContents, readFile)
 import qualified System.Environment as Environment
+import System.Exit (ExitCode (ExitFailure), exitSuccess, exitWith)
 import System.Process (CreateProcess (..), StdStream (..))
 import qualified System.Process as Proc
 import Text.Megaparsec.Error (errorBundlePretty)
@@ -50,3 +51,6 @@ instance (MonadIO m) => MonadLangIO (LangIOT m) where
     args <- Environment.getArgs
     let sepIndexM = elemIndex "--" args
     pure $ maybe [] ((`drop` args) . (+ 1)) sepIndexM
+
+  systemExit 0 = lift . liftIO $ exitSuccess
+  systemExit n = lift . liftIO $ exitWith (ExitFailure n)

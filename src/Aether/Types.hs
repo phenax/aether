@@ -105,6 +105,7 @@ class (Monad m) => MonadLangIO m where
   execCommand :: String -> [String] -> m (ExitCode, Text.Text, Text.Text)
   loadScriptToAST :: FilePath -> m (Either String [Expr])
   getArgs :: m [String]
+  systemExit :: Int -> m ()
 
 type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m a
 

@@ -358,11 +358,7 @@ test = describe "builtin" $ do
 
   describe "#make-symbol" $ do
     it "converts value into a symbol" $ do
-      let code =
-            [i|
-        (make-symbol "hello/world")
-        (make-symbol 28)
-      |]
+      let code = [i| (make-symbol "hello/world") (make-symbol 28) |]
       result <- runWithMocks $ evalExpr code
       result
         `shouldBe` Right
@@ -375,3 +371,13 @@ test = describe "builtin" $ do
         let code = [i| (make-symbol 1 2 "wow") |]
         result <- runWithMocks $ evalExpr code
         result `shouldBe` Left (ArgumentLengthError True 1 3 "make-symbol")
+
+  describe "#exit" $ do
+    it "exits with given status code" $ do
+      let code = [i| (exit 2) (exit 0) (exit "hello") |]
+      result <- runWithMocks $ do
+        expect $ SystemExit 2
+        expect $ SystemExit 0
+        expect $ SystemExit 0
+        evalExpr code
+      result `shouldBe` Right [ValNil, ValNil, ValNil]

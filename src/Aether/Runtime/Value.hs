@@ -1,10 +1,12 @@
 module Aether.Runtime.Value where
 
 import Aether.Types
+import Data.Maybe (fromMaybe)
+import Text.Read (readMaybe)
 
 valToNumber :: EvalValue -> Double
 valToNumber (ValNumber num) = num
-valToNumber (ValString num) = read num
+valToNumber (ValString num) = fromMaybe 0 $ readMaybe num
 valToNumber (ValBool True) = 1
 valToNumber (ValQuoted (ExprLiteral _ (LitNumber n))) = n
 valToNumber (ValQuoted (ExprLiteral _ (LitString str))) = read str
