@@ -2,6 +2,7 @@ module Aether.Runtime.LangIO where
 
 import qualified Aether.Syntax.Parser as Parser
 import Aether.Types
+import Control.Exception (IOException, catch)
 import Control.Monad.Error.Class (MonadError)
 import Control.Monad.IO.Class (MonadIO (liftIO))
 import Control.Monad.RWS (MonadState, MonadTrans (lift))
@@ -13,6 +14,7 @@ import System.Process (CreateProcess (..), StdStream (..))
 import qualified System.Process as Proc
 import Text.Megaparsec.Error (errorBundlePretty)
 import Prelude hiding (readFile)
+import qualified Prelude
 
 newtype LangIOT m a = LangIOT {runLangIOT :: m a}
   deriving (Functor, Applicative, Monad)
@@ -54,3 +56,10 @@ instance (MonadIO m) => MonadLangIO (LangIOT m) where
 
   systemExit 0 = lift . liftIO $ exitSuccess
   systemExit n = lift . liftIO $ exitWith (ExitFailure n)
+
+  -- TODO: Proper errors for read/write
+  readFileContents path = lift . liftIO $ do
+    (Right <$> Prelude.readFile path) `catch` (\(_ :: IOException) -> pure $ Left ())
+
+  writeToFile path contents = lift . liftIO $ do
+    (Right <$> Prelude.writeFile path contents) `catch` (\(_ :: IOException) -> pure $ Left ())

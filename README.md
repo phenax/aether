@@ -88,17 +88,28 @@ It can also be used to define values `(define symbol value)`.
 ```
 
 
-### Process handling
+### Processes
 `!` function spawns a process and waits for it to end. Returns `'(stdout stderrr)`.
 
 On non-zero exit code, it throws an error `(error! 'proc/non-zero-exit-code "... <stderr>")`
 
 ```scheme
-; Example: Takes a screenshot of the screen of the focussed window and saves it in given directory
-(expand [window-id, _] (! xdotool getwindowfocus)) ; expand macro destructures list into symbols
-(! import -window ,window-id "/home/user/Pictures")
+; Example: Takes a screenshot of the screen of the focused window using imagemagick and saves it
+(expand [window-id, _] (! xdotool getwindowfocus))
+(! import -window ,window-id "/home/user/Pictures/screenshot.jpg") ; Imagemagick `import`
 
 ; WIP: Process handling + pipes
+```
+
+
+### File IO
+Only supports reading and writing text files
+
+```scheme
+(set contents (fs/read-file "path/to/file"))
+(fs/write-file "path/to/file" (string contents "appending stuff"))
+
+; WIP: file handle, stat, etc
 ```
 
 
@@ -106,7 +117,7 @@ On non-zero exit code, it throws an error `(error! 'proc/non-zero-exit-code "...
 `import` function imports script files, relative to cwd, into the current scope (symbol and strings both work).
 
 ```scheme
-(import 'path/to/script-file-1 "../foobar/script-file-2" "./path/to/script-file-3")
+(import 'path/to/script-file-1.scm "../foobar/script-file-2.scm" "./path/to/script-file-3.scm")
 ```
 
 

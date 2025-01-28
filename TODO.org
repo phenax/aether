@@ -1,33 +1,11 @@
 * Current
-  - [X] Simple parser
-  - [X] Simple interpreter
-  - [X] Math operations
-  - [X] Simple stdlib
-  - [X] Quasiquotes
-  - [X] Fix lambda scope to be scope of definition and not call site
-  - [X] Var args
-  - [X] List operations
-  - [X] Add distinction between `,` and `,@` for splicing
-  - [X] Tests for defmacro
-  - [X] Macro for infix operators
-  - [X] Generate "primitive lambda" for builtins on symbol lookup
-  - [X] IO: display, displayNl
-  - [X] Struct/Record
-  - [X] Add source location for Expr type
-  - [x] Error handling (pcall style)
-  - [x] De-structuring macro, `(expand (a b c) (list 1 2 3))`
-  - [x] Fix updating symbols `set`/`define`
-  - [x] Use Seq for stack
-  - [x] Exec commands
-  - [x] Load/import file
-  - [x] Operations on symbols (from/to symbol)
-  - [x] Repl
-  - [x] `%`, `even?`, `odd?`
-  - [ ] Read/Write files
+  - [x] Read/Write files
   - [ ] Import relative instead of from cwd
-  - [ ] Parser: allow empty files
+  - [ ] Parser: Allow string escaping " with \
+  - [ ] Parser: tab/newline characters (\t \n)
+  - [ ] Car/cdr operations on string
+  - [ ] Regex match/replace
   - [ ] Spawning processes + pipes
-  - [ ] Operations on string
   - [ ] BUG: Fix issue with macro return value
       - When arg of macro returns an s-expr containing a symbol as argument, it gets evaluated (in if)
       - Maybe prevent arg to macros from becoming unquoted?
@@ -47,7 +25,6 @@
   - [ ] Optional arguments?
   - [ ] Optimize interpreter perfomance
   - [ ] Socket server mode + socket for commands
-  - [ ] Parser: Allow string escaping \"
   - [ ] IO interface: read from stdin
   - [ ] To js?
   - [ ] UI for sending commands (dmenu-like)

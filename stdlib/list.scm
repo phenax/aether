@@ -12,7 +12,9 @@
 
 (define (cadr ls) (car (cdr ls)))
 (define (caddr ls) (cadr (cdr ls)))
+
 (define first car)
+(define rest cdr)
 (define second cadr)
 (define third caddr)
 (define head car)

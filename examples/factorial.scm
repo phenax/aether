@@ -29,6 +29,7 @@
     (_^ set@:person/age 10)))
 (show-person updated-john)
 
+(displayNl (try (fs/read-file "hie.yaml123")))
 
 ;; (describe "some-function"
 ;;   (define-value value '(1 2 3))

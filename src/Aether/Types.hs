@@ -2,6 +2,7 @@
 
 module Aether.Types where
 
+import Control.Exception (Exception)
 import Control.Monad.Except (MonadError)
 import Control.Monad.RWS.Strict (MonadState)
 import qualified Data.Map.Strict as Map
@@ -106,6 +107,8 @@ class (Monad m) => MonadLangIO m where
   loadScriptToAST :: FilePath -> m (Either String [Expr])
   getArgs :: m [String]
   systemExit :: Int -> m ()
+  readFileContents :: FilePath -> m (Either () String)
+  writeToFile :: FilePath -> String -> m (Either () ())
 
 type Evaluator m a = (MonadState EvalEnvironment m, MonadError EvalError m, MonadLangIO m) => m a
 

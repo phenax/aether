@@ -54,8 +54,28 @@ builtins interpret =
         ("string", builtinString interpret),
         ("make-symbol", builtinMakeSymbol interpret),
         ("get-args", builtinGetArgs interpret),
+        ("fs/read-file", builtinReadFileContents interpret),
+        ("fs/write-file", builtinWriteFileContents interpret),
         ("exit", builtinExit interpret)
       ]
+
+-- TODO: Proper errors
+builtinReadFileContents :: Builtin m
+builtinReadFileContents interpret [filePathE] =
+  interpret filePathE >>= readFileContents . valToString >>= handleError
+  where
+    handleError (Left _) = throwError $ UserError (ValQuoted $ ExprSymbol NullSpan "read-file-error") (ValString "Unable to read file")
+    handleError (Right f) = pure $ ValString f
+builtinReadFileContents _ args = throwError $ ArgumentLengthError True 1 (length args) "exit"
+
+builtinWriteFileContents :: Builtin m
+builtinWriteFileContents interpret [filePathE, contentsE] = do
+  (path, contents) <- (,) <$> (valToString <$> interpret filePathE) <*> (valToString <$> interpret contentsE)
+  writeToFile path contents >>= handleError
+  where
+    handleError (Left _) = throwError $ UserError (ValQuoted $ ExprSymbol NullSpan "write-file-error") (ValString "Unable to write file")
+    handleError (Right ()) = pure ValNil
+builtinWriteFileContents _ args = throwError $ ArgumentLengthError True 1 (length args) "exit"
 
 operateOnExprs :: ([EvalValue] -> EvalValue) -> Builtin m
 operateOnExprs fn interpret exprs = fn <$> mapM interpret exprs

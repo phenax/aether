@@ -387,3 +387,45 @@ test = describe "builtin" $ do
       let code = [i| (remainder 13 5) (remainder 2 3) (remainder []) (remainder 5 5) (remainder (- 8) 5) |]
       result <- runWithMocks $ evalExpr code
       result `shouldBe` Right [ValNumber 3, ValNumber 2, ValNumber 0, ValNumber 0, ValNumber 2]
+
+  describe "#fs/read-file" $ do
+    it "reads file text content" $ do
+      let code = [i| (fs/read-file "path/to/file") |]
+      result <- runWithMocks $ do
+        expect $ ReadFileContents "path/to/file" |-> Right "File contents"
+        evalExpr code
+      result `shouldBe` Right [ValString "File contents"]
+
+    context "when read fails" $ do
+      it "throws an error" $ do
+        let code = [i| (fs/read-file "path/to/file") |]
+        result <- runWithMocks $ do
+          expect $ ReadFileContents "path/to/file" |-> Left ()
+          evalExpr code
+        result
+          `shouldBe` Left
+            ( UserError
+                (ValQuoted $ ExprSymbol NullSpan "read-file-error")
+                (ValString "Unable to read file")
+            )
+
+  describe "#fs/write-file" $ do
+    it "writes text content to file" $ do
+      let code = [i| (fs/write-file "path/to/file" "Contents to be written") |]
+      result <- runWithMocks $ do
+        expect $ WriteToFile "path/to/file" "Contents to be written" |-> Right ()
+        evalExpr code
+      result `shouldBe` Right [ValNil]
+
+    context "when write fails" $ do
+      it "throws an error" $ do
+        let code = [i| (fs/write-file "path/to/file" "Contents to be written") |]
+        result <- runWithMocks $ do
+          expect $ WriteToFile "path/to/file" "Contents to be written" |-> Left ()
+          evalExpr code
+        result
+          `shouldBe` Left
+            ( UserError
+                (ValQuoted $ ExprSymbol NullSpan "write-file-error")
+                (ValString "Unable to write file")
+            )
